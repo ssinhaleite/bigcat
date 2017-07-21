@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import java.awt.AWTException;
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -60,13 +61,16 @@ public class AnnotationsTest
 		// hdf file to use on test
 		final Parameters params = new Parameters();
 		params.inFile = "data/sample_B_20160708_frags_46_50_annotations.hdf";
+		String rawPath = "volumes/raw";
+		params.raws = new ArrayList< String >( );
+		params.raws.add( rawPath );
 		params.init();
 
 		// Start the visualization
 		BigCat< Parameters > bigCat;
 		try
 		{
-			bigCat = new BigCat<>();
+			bigCat = new BigCat<Parameters>();
 			bigCat.init( params );
 			bigCat.setupBdv( params );
 			controller = bigCat.annotationsController;
