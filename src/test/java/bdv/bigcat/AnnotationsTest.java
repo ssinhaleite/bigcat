@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 import bdv.bigcat.BigCat.Parameters;
@@ -54,10 +54,9 @@ public class AnnotationsTest
 	 * This method load the hdf file and the annotations. Initialize annotations
 	 * and controller variables that will be used
 	 */
-	@BeforeClass
-	public static void loadData()
+	@Before
+	public void loadData()
 	{
-
 		// hdf file to use on test
 		final Parameters params = new Parameters();
 		params.inFile = "data/sample_B_20160708_frags_46_50_annotations.hdf";
@@ -195,9 +194,35 @@ public class AnnotationsTest
 	@Test
 	public void hideAnnotations()
 	{
+		final boolean visibility = controller.getAnnotationOverlay().isVisible();
+		if (visibility)
+			LOGGER.log( Level.INFO, "Annotation is visible" );
+		else
+			LOGGER.log( Level.INFO, "Annotation is not visible" );
+
 		try
 		{
 			final Robot robot = new Robot();
+			
+			if ( !visibility )
+			{
+				// show annotations
+				LOGGER.log( Level.INFO, "Show annotations" );
+				robot.keyPress( KeyEvent.VK_O );
+				robot.keyRelease( KeyEvent.VK_O );
+
+				try
+				{
+					Thread.sleep( 50 );
+				}
+				catch ( InterruptedException e )
+				{
+					LOGGER.log( Level.SEVERE, "Thread sleep was interrupted", e );
+				}
+			}
+
+			// hiding annotations
+			LOGGER.log( Level.INFO, "Hide annotations" );
 			robot.keyPress( KeyEvent.VK_O );
 			robot.keyRelease( KeyEvent.VK_O );
 		}
