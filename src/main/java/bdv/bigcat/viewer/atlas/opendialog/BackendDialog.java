@@ -21,7 +21,6 @@ import net.imglib2.type.volatiles.AbstractVolatileRealType;
 
 public interface BackendDialog
 {
-
 	public Node getDialogNode();
 
 	public ObjectProperty< String > errorMessage();
