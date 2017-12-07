@@ -154,6 +154,20 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		setErrorEffect( commitField, this.commitErrorEffect );
 		setErrorEffect( datasetField, this.datasetErrorEffect );
 
+		this.dvidErrorEffect.addListener( ( obs, oldv, newv ) -> {
+			if ( !dvidURLField.isFocused() )
+				dvidURLField.setEffect( newv );
+		} );
+
+		dvidURLField.setEffect( this.dvidErrorEffect.get() );
+
+		dvidURLField.focusedProperty().addListener( ( obs, oldv, newv ) -> {
+			if ( newv )
+				dvidURLField.setEffect( BackendDialog.textFieldNoErrorEffect );
+			else
+				dvidURLField.setEffect( dvidErrorEffect.get() );
+		} );
+
 		return grid;
 	}
 
