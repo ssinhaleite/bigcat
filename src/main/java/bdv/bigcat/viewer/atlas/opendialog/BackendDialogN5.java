@@ -105,9 +105,6 @@ public class BackendDialogN5 implements BackendDialog, CombinesErrorMessages
 
 	private final StringBinding traversalMessage =
 			Bindings.createStringBinding( () -> isTraversingDirectories.get() ? "Discovering datasets" : "", isTraversingDirectories );
-	{
-		traversalMessage.addListener( ( obs, oldv, newv ) -> System.out.println( traversalMessage ) );
-	}
 
 	private final ObservableList< String > datasetChoices = FXCollections.observableArrayList();
 	{
