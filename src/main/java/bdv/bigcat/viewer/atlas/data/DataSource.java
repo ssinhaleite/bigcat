@@ -9,6 +9,7 @@ import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
+import bdv.bigcat.viewer.atlas.opendialog.DVIDUtils;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileTypeMatcher;
 import bdv.util.volatiles.VolatileViews;
@@ -462,5 +463,4 @@ public interface DataSource< D, T > extends Source< T >
 	{
 		return 0;
 	}
-
 }
