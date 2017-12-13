@@ -3,7 +3,6 @@ package bdv.bigcat.viewer.atlas.opendialog;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -31,7 +30,6 @@ import net.imglib2.Volatile;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.type.NativeType;
-import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 
 public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
@@ -40,9 +38,10 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private final SimpleObjectProperty< String > repoUUID = new SimpleObjectProperty<>();
 
+	// dataset
 	private final SimpleObjectProperty< String > dataset = new SimpleObjectProperty<>();
 
-	// all error messages combined
+	// combined error messages
 	private final SimpleObjectProperty< String > errorMessage = new SimpleObjectProperty<>();
 
 	// no url defined
@@ -51,14 +50,17 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	// no repository defined
 	private final SimpleObjectProperty< String > repoUUIDError = new SimpleObjectProperty<>();
 
-	// no dataset defined
-	private final SimpleObjectProperty< String > datasetError = new SimpleObjectProperty<>();
-
 	// couldn't find the repo informed
 	private final SimpleObjectProperty< String > invalidURLError = new SimpleObjectProperty<>();
 
 	// the number of dimensions is less than 3 or bigger than 5
 	private final SimpleObjectProperty< String > axisError = new SimpleObjectProperty<>();
+
+	// error message for invalid dataset
+	private final SimpleObjectProperty< String > datasetError = new SimpleObjectProperty<>();
+
+	// error message for invalid commit
+	private final SimpleObjectProperty< String > commitError = new SimpleObjectProperty<>();
 
 	private final SimpleObjectProperty< Effect > dvidErrorEffect = new SimpleObjectProperty<>();
 
@@ -153,20 +155,6 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		setErrorEffect( dvidURLField, this.dvidErrorEffect );
 		setErrorEffect( commitField, this.commitErrorEffect );
 		setErrorEffect( datasetField, this.datasetErrorEffect );
-
-		this.dvidErrorEffect.addListener( ( obs, oldv, newv ) -> {
-			if ( !dvidURLField.isFocused() )
-				dvidURLField.setEffect( newv );
-		} );
-
-		dvidURLField.setEffect( this.dvidErrorEffect.get() );
-
-		dvidURLField.focusedProperty().addListener( ( obs, oldv, newv ) -> {
-			if ( newv )
-				dvidURLField.setEffect( BackendDialog.textFieldNoErrorEffect );
-			else
-				dvidURLField.setEffect( dvidErrorEffect.get() );
-		} );
 
 		return grid;
 	}
