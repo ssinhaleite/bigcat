@@ -202,6 +202,9 @@ public class Atlas
 			{	
 				if ( sourceInfo.numSources() == 0 )
 					return;
+				
+//				if (currentMode.get() != initialModes[1])
+//					return;
 
 				final IdSelectorDialog idDialog = new IdSelectorDialog();
 				final Optional< ButtonType > result = idDialog.showAndWait();
