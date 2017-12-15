@@ -134,6 +134,20 @@ public class IdSelector
 		return new MouseClickFX( name, confirmSelection::click, eventFilter );
 	}
 
+	public void selectFragmentWithMaximumCount( final long[] ids )
+	{
+		final SelectFragmentWithMaximumCount selectFragment = new SelectFragmentWithMaximumCount();
+		for ( int i = 0; i < ids.length; i++ )
+			selectFragment.select( ids[ i ] );
+	}
+
+	public void appendFragmentWithMaximumCount( final long[] ids )
+	{
+		final AppendFragmentWithMaximumCount appendFragment = new AppendFragmentWithMaximumCount();
+		for ( int i = 0; i < ids.length; i++ )
+			appendFragment.select( ids[ i ] );
+	}
+
 	private abstract class Select
 	{
 
@@ -198,6 +212,23 @@ public class IdSelector
 						viewer.displayToGlobalCoordinates( access );
 						final Object val = access.get();
 						final long id = toIdConverter.get().biggestFragment( val );
+						actOn( id, selectedIds.get() );
+					}
+			}
+		}
+
+		public void select( final long id )
+		{
+			final Optional< Source< ? > > optionalSource = getSource();
+			if ( !optionalSource.isPresent() )
+				return;
+			final Source< ? > source = optionalSource.get();
+			if ( source instanceof DataSource< ?, ? > )
+			{
+				final Optional< SelectedIds > selectedIds = sourceInfo.selectedIds( source, mode );
+				if ( selectedIds.isPresent() )
+					synchronized ( viewer )
+					{
 						actOn( id, selectedIds.get() );
 					}
 			}
