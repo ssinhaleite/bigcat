@@ -67,7 +67,7 @@ public class Viewer3DControllerFX
 			final SelectedIds selectedIds,
 			final GlobalTransformManager transformManager )
 	{
-		LOG.debug( "Rendering neuron: {} {}", fragmentId, fragmentSegmentAssignment.getSegment( fragmentId ) );
+		System.out.println( "Rendering neuron: {} {} "+ fragmentId+" "+ fragmentSegmentAssignment.getSegment( fragmentId ) );
 
 		if ( LOG.isWarnEnabled() )
 			if ( IntStream.range( 0, cubeSize.length ).map( d -> partitionSize[ d ] % cubeSize[ d ] ).filter( mod -> mod != 0 ).count() > 0 )

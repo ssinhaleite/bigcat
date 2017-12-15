@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,8 @@ import bdv.bigcat.composite.ARGBCompositeAlphaYCbCr;
 import bdv.bigcat.composite.ClearingCompositeProjector.ClearingCompositeProjectorFactory;
 import bdv.bigcat.composite.Composite;
 import bdv.bigcat.ui.ARGBStream;
+import bdv.bigcat.viewer.IdSelector;
+import bdv.bigcat.viewer.IdSelectorDialog;
 import bdv.bigcat.viewer.ToIdConverter;
 import bdv.bigcat.viewer.ViewerActor;
 import bdv.bigcat.viewer.atlas.AtlasFocusHandler.OnEnterOnExit;
@@ -35,6 +38,7 @@ import bdv.bigcat.viewer.atlas.mode.NavigationOnly;
 import bdv.bigcat.viewer.atlas.opendialog.BackendDialog;
 import bdv.bigcat.viewer.atlas.opendialog.MetaPanel;
 import bdv.bigcat.viewer.atlas.opendialog.OpenSourceDialog;
+import bdv.bigcat.viewer.bdvfx.InstallAndRemove;
 import bdv.bigcat.viewer.bdvfx.KeyTracker;
 import bdv.bigcat.viewer.bdvfx.ViewerPanelFX;
 import bdv.bigcat.viewer.ortho.OrthoView;
@@ -56,6 +60,8 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
+import bdv.viewer.state.SourceState;
+import bdv.viewer.state.ViewerState;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -80,6 +86,9 @@ import net.imglib2.converter.RealARGBConverter;
 import net.imglib2.interpolation.randomaccess.ClampingNLinearInterpolatorFactory;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.RealTransformRealRandomAccessible;
+import net.imglib2.realtransform.RealViews;
 import net.imglib2.type.logic.BoolType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.IntegerType;
@@ -193,6 +202,72 @@ public class Atlas
 		this.baseView().addEventHandler( KeyEvent.KEY_PRESSED, event -> {
 			if ( event.getCode().equals( KeyCode.O ) && event.isShiftDown() && !event.isAltDown() && !event.isControlDown() )
 				orthoSlices.forEach( OrthoSliceFX::toggleVisibility );
+		} );
+		
+		this.baseView().addEventHandler( KeyEvent.KEY_PRESSED, event -> {
+			if ( event.getCode().equals( KeyCode.I ) && event.isControlDown() && !event.isAltDown() && !event.isShiftDown() )
+			{	
+				System.out.println("id selector");
+				final IdSelectorDialog idDialog = new IdSelectorDialog();
+				final Optional< String > dataset = idDialog.showAndWait();
+				if ( dataset.isPresent() )
+				{
+					System.out.println("dataset is present");
+
+					ViewerPanelFX viewer = null;
+					for ( final Node child : this.baseView().getChildren() )
+						if ( child instanceof ViewerNode )
+						{
+							final ViewerNode vn = ( ViewerNode ) child;
+							viewer = vn.getViewer();
+							break;
+						}
+					
+					System.out.println("viewer: " + viewer);
+
+					final int currentSource = viewer.getState().getCurrentSource();
+					final List< SourceState< ? > > sources = viewer.getState().getSources();
+					if ( sources.size() <= currentSource || currentSource < 0 )
+					{
+						System.out.println("returning...");
+						return;
+					}
+					final Source< ? > source = sources.get( currentSource ).getSpimSource();
+					
+					long[] ids = idDialog.getIds();
+					final DataSource< ?, ? > dataSource = ( DataSource< ?, ? > ) source;
+					final Optional< SelectedIds > selectedIds = sourceInfo.selectedIds( source, modes.get(1) );
+
+					if ( selectedIds.isPresent())
+					{
+						System.out.println("selectedIds is present");
+						SelectedIds selected = selectedIds.get();
+						if (idDialog.append())
+						{
+							System.out.println("append");
+							for ( int i = 0; i < ids.length; ++i )
+								if ( !selected.isActive( ids[i] ) )
+									selected.activateAlso( ids[ i ] );
+								else
+									selected.deactivate( ids[ i ] );	
+						}
+						else
+						{
+							System.out.println("do not append");
+							selected.deactivateAll();
+							for ( int i = 0; i < ids.length; ++i )
+							{
+								System.out.println( "ACTIVATE? " + selected.isActive( ids[i] )+ " "+ ids[ i ] );
+								if ( !selected.isActive( ids[i] ))
+									selected.activateAlso( ids[ i ] );
+								else
+									selected.deactivate( ids[ i ] );
+							}
+						}
+					}
+				}
+	
+			}
 		} );
 
 		this.root.sceneProperty().addListener( ( obs, oldv, newv ) -> {
