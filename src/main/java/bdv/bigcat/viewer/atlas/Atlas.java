@@ -204,16 +204,8 @@ public class Atlas
 				final Optional< String > dataset = idDialog.showAndWait();
 				if ( dataset.isPresent() )
 				{
-					ViewerPanelFX viewer = null;
-					for ( final Node child : this.baseView().getChildren() )
-						if ( child instanceof ViewerNode )
-						{
-							final ViewerNode vn = ( ViewerNode ) child;
-							viewer = vn.getViewer();
-							break;
-						}
-					
-					final IdSelector selector = new IdSelector( viewer, sourceInfo, currentMode.get() );
+					final ViewerNode vn = this.baseView().getChildren().stream().filter( child -> child instanceof ViewerNode ).map( n -> ( ViewerNode ) n ).findFirst().get();
+					final IdSelector selector = new IdSelector( vn.getViewer(), sourceInfo, currentMode.get() );
 					long[] ids = idDialog.getIds();
 					if ( idDialog.append() )
 						selector.appendFragmentWithMaximumCount( ids );
