@@ -134,11 +134,16 @@ public class IdSelector
 		return new MouseClickFX( name, confirmSelection::click, eventFilter );
 	}
 
-	public void selectFragmentWithMaximumCount( final long[] ids )
+	public void selectFragmentsWithMaximumCount( final long[] ids )
 	{
 		final SelectFragmentWithMaximumCount selectFragment = new SelectFragmentWithMaximumCount();
-		for ( int i = 0; i < ids.length; i++ )
-			selectFragment.select( ids[ i ] );
+		if ( ids.length >= 1 )
+		{
+			selectFragment.select( ids[ 0 ] );
+			final AppendFragmentWithMaximumCount appendFragment = new AppendFragmentWithMaximumCount();
+			for ( int i = 1; i < ids.length; i++ )
+				appendFragment.select( ids[ i ] );
+		}
 	}
 
 	public void appendFragmentWithMaximumCount( final long[] ids )
@@ -297,7 +302,6 @@ public class IdSelector
 
 	private class AppendFragmentWithMaximumCount extends SelectMaximumCount
 	{
-
 		@Override
 		protected void actOn( final long id, final SelectedIds selectedIds )
 		{
