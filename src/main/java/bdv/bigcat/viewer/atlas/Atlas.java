@@ -200,9 +200,12 @@ public class Atlas
 		this.baseView().addEventHandler( KeyEvent.KEY_PRESSED, event -> {
 			if ( event.getCode().equals( KeyCode.I ) && event.isControlDown() && !event.isAltDown() && !event.isShiftDown() )
 			{	
+				if ( sourceInfo.numSources() == 0 )
+					return;
+
 				final IdSelectorDialog idDialog = new IdSelectorDialog();
-				final Optional< String > dataset = idDialog.showAndWait();
-				if ( dataset.isPresent() )
+				final Optional< ButtonType > result = idDialog.showAndWait();
+				if ( result.isPresent() && result.get() == ButtonType.OK )
 				{
 					final ViewerNode vn = this.baseView().getChildren().stream().filter( child -> child instanceof ViewerNode ).map( n -> ( ViewerNode ) n ).findFirst().get();
 					final IdSelector selector = new IdSelector( vn.getViewer(), sourceInfo, currentMode.get() );
@@ -210,7 +213,7 @@ public class Atlas
 					if ( idDialog.append() )
 						selector.appendFragmentWithMaximumCount( ids );
 					else
-						selector.selectFragmentWithMaximumCount( ids );
+						selector.selectFragmentsWithMaximumCount( ids );
 				}
 			}
 		} );
