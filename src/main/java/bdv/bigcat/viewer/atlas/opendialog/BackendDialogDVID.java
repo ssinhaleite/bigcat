@@ -1,9 +1,9 @@
 package bdv.bigcat.viewer.atlas.opendialog;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import bdv.bigcat.viewer.atlas.data.DataSource;
@@ -19,10 +19,10 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.volatiles.AbstractVolatileRealType;
 
 public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 {
-
 	// base url to api
 	private final SimpleObjectProperty< String > dvid = new SimpleObjectProperty<>();
 
@@ -156,10 +156,11 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 	}
 
 	@Override
-	public < T extends RealType< T > & NativeType< T >, V extends RealType< V > > Optional< DataSource< T, V > > getRaw(
+	public < T extends RealType< T > & NativeType< T >, V extends AbstractVolatileRealType< T, V > & NativeType< V > > Collection< DataSource< T, V > > getRaw(
 			final String name,
 			final double[] resolution,
 			final double[] offset,
+			final AxisOrder axisOrder,
 			final SharedQueue sharedQueue,
 			final int priority ) throws IOException
 	{
@@ -167,18 +168,20 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 		final String rawCommit = this.commit.get();
 		final String rawDataset = this.dataset.get();
 
-		return Optional.of( DataSource.createDVIDRawSource( name, rawURL, rawCommit, rawDataset, resolution, offset, sharedQueue, priority ) );
+		return new ArrayList<>();
+
 	}
 
 	@Override
-	public Optional< LabelDataSource< ?, ? > > getLabels(
+	public Collection< LabelDataSource< ?, ? > > getLabels(
 			final String name,
 			final double[] resolution,
 			final double[] offset,
+			final AxisOrder axisOrder,
 			final SharedQueue sharedQueue,
 			final int priority ) throws IOException
 	{
-		return Optional.empty();
+		return new ArrayList<>();
 	}
 
 	@Override
