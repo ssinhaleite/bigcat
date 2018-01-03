@@ -92,9 +92,9 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 
 		this.errorMessages().forEach( em -> em.addListener( ( obs, oldv, newv ) -> combineErrorMessages() ) );
 		
-		dvid.set( "" );
-		commit.set( "" );
-		dataset.set( "" );
+		dvid.set( "http://emdata.janelia.org/api/node" );
+		commit.set( "822524777d3048b8bd520043f90c1d28" );
+		dataset.set( "grayscale" );
 	}
 
 	@Override
