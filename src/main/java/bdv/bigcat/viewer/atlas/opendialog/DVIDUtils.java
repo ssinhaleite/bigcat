@@ -10,6 +10,8 @@ import static net.imglib2.cache.img.PrimitiveType.SHORT;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -17,6 +19,10 @@ import java.util.function.LongFunction;
 
 import org.apache.commons.io.IOUtils;
 import org.janelia.saalfeldlab.n5.DataType;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -53,7 +59,7 @@ public class DVIDUtils
 	private DVIDUtils()
 	{}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "unchecked" } )
 	public static final < T extends NativeType< T > > RandomAccessibleInterval< T > openVolatile(
 			final String dvidURL,
 			final String repoUUID,
@@ -154,6 +160,13 @@ public class DVIDUtils
 
 		System.out.println( "img " + img );
 		return img;
+	}
+
+	final static public < T > T fetch( final String url, final Type type ) throws JsonSyntaxException, JsonIOException, IOException
+	{
+		final Gson gson = new Gson();
+		final T t = gson.fromJson( new InputStreamReader( new URL( url ).openStream() ), type );
+		return t;
 	}
 
 	public static class HTTPLoader< A > implements Function< Interval, A >
