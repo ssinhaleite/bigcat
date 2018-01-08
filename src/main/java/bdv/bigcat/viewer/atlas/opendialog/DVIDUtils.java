@@ -2,6 +2,8 @@ package bdv.bigcat.viewer.atlas.opendialog;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -9,6 +11,10 @@ import java.util.function.LongFunction;
 
 import org.apache.commons.io.IOUtils;
 import org.janelia.saalfeldlab.n5.DataType;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -37,18 +43,26 @@ public class DVIDUtils
 	private DVIDUtils()
 	{}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "unchecked" } )
 	public static final < T extends NativeType< T > > RandomAccessibleInterval< T > openVolatile(
 			final String dvidURL,
-			final String commit,
+			final String repoUUID,
 			final String dataset,
 			final double[] offset ) throws IOException
 	{
 		// TODO - recover information from data
 		final long[] dimensions = new long[] { 300, 300, 300 };
-		final int[] blockSize = new int[] { 64, 64, 64 };
-		DataType datatype = DataType.UINT8;
-		double[] offset2 = new double[] { 3456, 3072, 2688 };
+
+		String infoUrl = dvidURL + "/" + repoUUID + "/" + dataset + "/info";
+		final DVIDResponse response = fetch( infoUrl, DVIDResponse.class );
+		final int[] blockSize = new int[] { response.Extended.BlockSize[ 0 ], response.Extended.BlockSize[ 1 ], response.Extended.BlockSize[ 2 ] };
+
+		// TODO: values.get(0)?
+		String type = response.Extended.Values.get( 0 ).DataType;
+		DataType datatype = DataType.fromString( type );
+
+		// TODO: offset2 = minpoint * 2 ?
+		double[] offset2 = new double[] { response.Extended.MinPoint[ 0 ] * 2, response.Extended.MinPoint[ 1 ] * 2, response.Extended.MinPoint[ 2 ] * 2 };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
 		final BiConsumer< byte[], DirtyVolatileByteArray > copier = ( bytes, access ) -> {
@@ -58,7 +72,7 @@ public class DVIDUtils
 
 		// TODO: isotropic/0/1/2 ?
 		final String format = String.format( "%s/%s/%s/%s/%s/%s",
-				dvidURL, commit, dataset, "isotropic/0_1_2",
+				dvidURL, repoUUID, dataset, "isotropic/0_1_2",
 				"%d_%d_%d",
 				"%d_%d_%d" );
 
@@ -133,6 +147,13 @@ public class DVIDUtils
 
 		System.out.println( "img " + img );
 		return img;
+	}
+
+	final static public < T > T fetch( final String url, final Type type ) throws JsonSyntaxException, JsonIOException, IOException
+	{
+		final Gson gson = new Gson();
+		final T t = gson.fromJson( new InputStreamReader( new URL( url ).openStream() ), type );
+		return t;
 	}
 
 	public static class HTTPLoader< A > implements Function< Interval, A >
