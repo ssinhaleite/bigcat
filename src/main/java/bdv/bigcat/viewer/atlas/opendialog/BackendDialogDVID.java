@@ -7,7 +7,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import bdv.bigcat.viewer.atlas.data.DataSource;
+<<<<<<< 7fc4eaa0faa423505b41da73bf0313ef7410c57c
 import bdv.bigcat.viewer.atlas.data.LabelDataSource;
+=======
+>>>>>>> Fix build. LabelDataSource is not working yet.
 import bdv.util.volatiles.SharedQueue;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
