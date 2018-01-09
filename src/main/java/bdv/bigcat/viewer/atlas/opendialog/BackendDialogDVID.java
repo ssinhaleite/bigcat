@@ -117,10 +117,10 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		datasetError.addListener( ( obs, oldv, newv ) -> this.datasetErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
 
 		this.errorMessages().forEach( em -> em.addListener( ( obs, oldv, newv ) -> combineErrorMessages() ) );
-		
-		dvid.set( "http://emdata.janelia.org/api/node" );
-		commit.set( "822524777d3048b8bd520043f90c1d28" );
-		dataset.set( "grayscale" );
+
+		dvidURL.set( "" );
+		repoUUID.set( "" );
+		dataset.set( "" );
 	}
 
 	@Override
