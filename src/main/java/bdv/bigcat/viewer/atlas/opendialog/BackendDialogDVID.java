@@ -9,7 +9,9 @@ import java.util.function.Consumer;
 import bdv.bigcat.viewer.atlas.data.DataSource;
 import bdv.bigcat.viewer.atlas.data.LabelDataSource;
 import bdv.util.volatiles.SharedQueue;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -50,12 +52,33 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 
 	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
 
+	private final SimpleDoubleProperty resX = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty resY = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty resZ = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty offX = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty offY = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty offZ = new SimpleDoubleProperty( Double.NaN );
+
 	public BackendDialogDVID()
 	{
 		dvid.addListener( ( obs, oldv, newv ) -> {
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.dvidError.set( null );
+				try
+				{
+					updateMetaInformation();
+				}
+				catch ( IOException e )
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			else
 			{
@@ -67,6 +90,15 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.commitError.set( null );
+				try
+				{
+					updateMetaInformation();
+				}
+				catch ( IOException e )
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			else
 			{
@@ -78,6 +110,15 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.datasetError.set( null );
+				try
+				{
+					updateMetaInformation();
+				}
+				catch ( IOException e )
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 			else
 			{
@@ -90,10 +131,10 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 		datasetError.addListener( ( obs, oldv, newv ) -> this.datasetErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
 
 		this.errorMessages().forEach( em -> em.addListener( ( obs, oldv, newv ) -> combineErrorMessages() ) );
-		
-		dvid.set( "http://emdata.janelia.org/api/node" );
-		commit.set( "822524777d3048b8bd520043f90c1d28" );
-		dataset.set( "grayscale" );
+
+		dvid.set( "" );
+		commit.set( "" );
+		dataset.set( "" );
 	}
 
 	@Override
@@ -149,6 +190,36 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 		} );
 	}
 
+	private void updateMetaInformation() throws IOException
+	{
+		if ( ( dvid.get() != null ) && ( commit.get() != null ) && ( dataset.get() != null ) )
+		{
+			if ( dvid.get().isEmpty() || commit.get().isEmpty() || dataset.get().isEmpty() )
+				return;
+
+			String infoUrl = dvid.get() + "/" + commit.get() + "/" + dataset.get() + "/info";
+			final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
+
+			if ( response.Extended.VoxelSize.length == 3 )
+			{
+				resX.set( response.Extended.VoxelSize[ 0 ] );
+				resY.set( response.Extended.VoxelSize[ 1 ] );
+				resZ.set( response.Extended.VoxelSize[ 2 ] );
+			}
+
+			if ( response.Extended.MinPoint.length == 3 )
+			{
+				offX.set( response.Extended.MinPoint[ 0 ] );
+				offY.set( response.Extended.MinPoint[ 1 ] );
+				offZ.set( response.Extended.MinPoint[ 2 ] );
+			}
+		}
+		else
+		{
+			System.out.println( "empty " );
+		}
+	}
+
 	@Override
 	public ObjectProperty< String > errorMessage()
 	{
@@ -194,6 +265,42 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 	public Consumer< Collection< String > > combiner()
 	{
 		return strings -> this.errorMessage.set( String.join( "\n", strings ) );
+	}
+
+	@Override
+	public DoubleProperty resolutionX()
+	{
+		return this.resX;
+	}
+
+	@Override
+	public DoubleProperty resolutionY()
+	{
+		return this.resY;
+	}
+
+	@Override
+	public DoubleProperty resolutionZ()
+	{
+		return this.resZ;
+	}
+
+	@Override
+	public DoubleProperty offsetX()
+	{
+		return this.offX;
+	}
+
+	@Override
+	public DoubleProperty offsetY()
+	{
+		return this.offY;
+	}
+
+	@Override
+	public DoubleProperty offsetZ()
+	{
+		return this.offZ;
 	}
 
 }
