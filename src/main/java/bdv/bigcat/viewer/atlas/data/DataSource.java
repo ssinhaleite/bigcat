@@ -400,15 +400,15 @@ public interface DataSource< D, T > extends Source< T >
 	
 	public static < T extends NativeType< T > & NumericType< T >, V extends NumericType< V > > RandomAccessibleIntervalDataSource< T, V > createDVIDRawSource(
 			final String name,
-			final String rawURL,
-			final String rawCommit,
-			final String rawDataset,
+			final String url,
+			final String repoUUID,
+			final String dataset,
 			final double[] resolution,
 			final double[] offset,
 			final SharedQueue sharedQueue,
 			final int priority ) throws IOException
 	{
-		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( rawURL, rawCommit, rawDataset, offset );
+		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset );
 
 		final T t = Util.getTypeFromInterval( raw );
 		@SuppressWarnings( "unchecked" )
