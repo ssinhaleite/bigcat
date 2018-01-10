@@ -1,20 +1,17 @@
 package bdv.bigcat.viewer.atlas.opendialog;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 
-import bdv.bigcat.viewer.atlas.data.DataSource;
-<<<<<<< 7fc4eaa0faa423505b41da73bf0313ef7410c57c
-import bdv.bigcat.viewer.atlas.data.LabelDataSource;
-=======
->>>>>>> Fix build. LabelDataSource is not working yet.
+import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
 import bdv.util.volatiles.SharedQueue;
+import bdv.util.volatiles.VolatileViews;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -25,11 +22,15 @@ import javafx.scene.control.TextField;
 import javafx.scene.effect.Effect;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.Volatile;
+import net.imglib2.cache.volatiles.CacheHints;
+import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.volatiles.AbstractVolatileRealType;
+import net.imglib2.util.Pair;
+import net.imglib2.util.ValuePair;
 
-public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
+public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 {
 	// base url to api
 	private final SimpleObjectProperty< String > dvid = new SimpleObjectProperty<>();
@@ -218,35 +219,6 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 	}
 
 	@Override
-	public < T extends RealType< T > & NativeType< T >, V extends AbstractVolatileRealType< T, V > & NativeType< V > > Collection< DataSource< T, V > > getRaw(
-			final String name,
-			final double[] resolution,
-			final double[] offset,
-			final AxisOrder axisOrder,
-			final SharedQueue sharedQueue,
-			final int priority ) throws IOException
-	{
-		final String rawURL = this.dvid.get();
-		final String rawCommit = this.commit.get();
-		final String rawDataset = this.dataset.get();
-
-		return new ArrayList<>();
-
-	}
-
-	@Override
-	public Collection< LabelDataSource< ?, ? > > getLabels(
-			final String name,
-			final double[] resolution,
-			final double[] offset,
-			final AxisOrder axisOrder,
-			final SharedQueue sharedQueue,
-			final int priority ) throws IOException
-	{
-		return new ArrayList<>();
-	}
-
-	@Override
 	public Collection< ObservableValue< String > > errorMessages()
 	{
 		return Arrays.asList( this.dvidError, this.commitError, this.datasetError, this.repoError );
@@ -294,4 +266,45 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 		return this.offZ;
 	}
 
+	@SuppressWarnings( "unchecked" )
+	@Override
+	public < T extends NativeType< T >, V extends Volatile< T > > Pair< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[] > getDataAndVolatile( SharedQueue sharedQueue, int priority ) throws IOException
+	{
+		final String url = this.dvid.get();
+		final String repoUUID = this.commit.get();
+		final String dataset = this.dataset.get();
+		final double[] offset = new double[] { offsetX().get(), offsetY().get(), offsetZ().get() };
+
+		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset );
+		final RandomAccessibleInterval< V > vraw = VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
+		return new ValuePair<>( new RandomAccessibleInterval[] { raw }, new RandomAccessibleInterval[] { vraw } );
+	}
+
+	@Override
+	public boolean isLabelType() throws Exception
+	{
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean isLabelMultisetType() throws Exception
+	{
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean isIntegerType() throws Exception
+	{
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
