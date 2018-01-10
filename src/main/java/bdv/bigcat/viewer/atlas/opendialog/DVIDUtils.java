@@ -50,14 +50,20 @@ public class DVIDUtils
 		final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
 		final int[] blockSize = new int[] { response.Extended.BlockSize[ 0 ], response.Extended.BlockSize[ 1 ], response.Extended.BlockSize[ 2 ] };
 
-		// TODO: values.get(0)?
-		String type = response.Extended.Values.get( 0 ).DataType;
+		String type = "";
+		if ( response.Extended.Values.size() > 0 )
+			type = response.Extended.Values.get( 0 ).DataType;
+
 		DVIDUtils.datatype = DataType.fromString( type );
 
 		// image size
-		final long[] dimensions = new long[] { response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ], response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ], response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] };
+		final long[] dimensions = new long[] {
+				response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1,
+				response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1,
+				response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
+
 		final BiConsumer< byte[], DirtyVolatileByteArray > copier = ( bytes, access ) -> {
 			System.arraycopy( bytes, 0, access.getCurrentStorageArray(), 0, bytes.length );
 			access.setDirty();
@@ -138,7 +144,6 @@ public class DVIDUtils
 			img = null;
 		}
 
-		System.out.println( "img " + img );
 		return img;
 	}
 
