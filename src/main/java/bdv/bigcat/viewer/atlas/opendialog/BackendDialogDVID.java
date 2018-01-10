@@ -6,6 +6,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.Consumer;
 
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+
 import bdv.bigcat.viewer.atlas.data.DataSource;
 <<<<<<< 7fc4eaa0faa423505b41da73bf0313ef7410c57c
 import bdv.bigcat.viewer.atlas.data.LabelDataSource;
@@ -56,6 +59,8 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 
 	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
 
+	private final SimpleObjectProperty< String > repoError = new SimpleObjectProperty<>();
+
 	private final SimpleDoubleProperty resX = new SimpleDoubleProperty( Double.NaN );
 
 	private final SimpleDoubleProperty resY = new SimpleDoubleProperty( Double.NaN );
@@ -74,15 +79,7 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.dvidError.set( null );
-				try
-				{
-					updateMetaInformation();
-				}
-				catch ( IOException e )
-				{
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				updateMetaInformation();
 			}
 			else
 			{
@@ -94,15 +91,7 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.commitError.set( null );
-				try
-				{
-					updateMetaInformation();
-				}
-				catch ( IOException e )
-				{
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				updateMetaInformation();
 			}
 			else
 			{
@@ -114,15 +103,7 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 			if ( newv != null && !newv.isEmpty() )
 			{
 				this.datasetError.set( null );
-				try
-				{
-					updateMetaInformation();
-				}
-				catch ( IOException e )
-				{
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				updateMetaInformation();
 			}
 			else
 			{
@@ -194,7 +175,7 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 		} );
 	}
 
-	private void updateMetaInformation() throws IOException
+	private void updateMetaInformation()
 	{
 		if ( ( dvid.get() != null ) && ( commit.get() != null ) && ( dataset.get() != null ) )
 		{
@@ -202,8 +183,19 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 				return;
 
 			String infoUrl = dvid.get() + "/" + commit.get() + "/" + dataset.get() + "/info";
-			final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
+			DVIDResponse response = null;
+			try
+			{
+				response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
+			}
+			catch ( JsonSyntaxException | JsonIOException | IOException e )
+			{
 
+				this.repoError.set( "no data/repository found" );
+				return;
+			}
+
+			this.repoError.set( "" );
 			if ( response.Extended.VoxelSize.length == 3 )
 			{
 				resX.set( response.Extended.VoxelSize[ 0 ] );
@@ -217,10 +209,6 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 				offY.set( response.Extended.MinPoint[ 1 ] );
 				offZ.set( response.Extended.MinPoint[ 2 ] );
 			}
-		}
-		else
-		{
-			System.out.println( "empty " );
 		}
 	}
 
@@ -261,7 +249,7 @@ public class BackendDialogDVID implements BackendDialog, CombinesErrorMessages
 	@Override
 	public Collection< ObservableValue< String > > errorMessages()
 	{
-		return Arrays.asList( this.dvidError, this.commitError, this.datasetError );
+		return Arrays.asList( this.dvidError, this.commitError, this.datasetError, this.repoError );
 	}
 
 	@Override
