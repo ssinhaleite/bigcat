@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Consumer;
 
+import org.janelia.saalfeldlab.n5.DataType;
+
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 
@@ -73,6 +75,10 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	private final SimpleDoubleProperty offY = new SimpleDoubleProperty( Double.NaN );
 
 	private final SimpleDoubleProperty offZ = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty min = new SimpleDoubleProperty( Double.NaN );
+
+	private final SimpleDoubleProperty max = new SimpleDoubleProperty( Double.NaN );
 
 	public BackendDialogDVID()
 	{
@@ -210,6 +216,15 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 				offY.set( response.Extended.MinPoint[ 1 ] );
 				offZ.set( response.Extended.MinPoint[ 2 ] );
 			}
+
+			String type = "";
+			if ( response.Extended.Values.size() > 0 )
+				type = response.Extended.Values.get( 0 ).DataType;
+
+			DataType datatype = DataType.fromString( type );
+			min.set( minForType( datatype ) );
+			max.set( maxForType( datatype ) );
+
 		}
 	}
 
@@ -267,6 +282,18 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return this.offZ;
 	}
 
+	@Override
+	public DoubleProperty min()
+	{
+		return this.min;
+	}
+
+	@Override
+	public DoubleProperty max()
+	{
+		return this.max;
+	}
+
 	@SuppressWarnings( "unchecked" )
 	@Override
 	public < T extends NativeType< T >, V extends Volatile< T > > Pair< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[] > getDataAndVolatile( SharedQueue sharedQueue, int priority ) throws IOException
@@ -307,5 +334,39 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	{
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	private static double minForType( final DataType t )
+	{
+		// TODO ever return non-zero here?
+		return 0.0;
+	}
+
+	private static double maxForType( final DataType t )
+	{
+		switch ( t )
+		{
+		case UINT8:
+			return 0xff;
+		case UINT16:
+			return 0xffff;
+		case UINT32:
+			return 0xffffffffl;
+		case UINT64:
+			return 2.0 * Long.MAX_VALUE;
+		case INT8:
+			return Byte.MAX_VALUE;
+		case INT16:
+			return Short.MAX_VALUE;
+		case INT32:
+			return Integer.MAX_VALUE;
+		case INT64:
+			return Long.MAX_VALUE;
+		case FLOAT32:
+		case FLOAT64:
+			return 1.0;
+		default:
+			return 1.0;
+		}
 	}
 }
