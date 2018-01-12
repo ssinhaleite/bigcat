@@ -39,9 +39,9 @@ public class DVIDResponse
 
 		public String[] VoxelUnits;
 
-		public long[] MinPoint;
+		public double[] MinPoint;
 
-		public long[] MaxPoint;
+		public double[] MaxPoint;
 
 		public long[] MinIndex;
 
