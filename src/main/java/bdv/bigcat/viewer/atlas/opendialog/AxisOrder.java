@@ -31,7 +31,7 @@ public enum AxisOrder
 	YZXC, YXZC,
 	ZXYC, ZYXC,
 
-	// space and channel only (channel only before and after space)?
+	// space, channel and time (channel/time only before and after space)?
 	CTXYZ, CTXZY,
 	CTYZX, CTYXZ,
 	CTZXY, CTZYX,
