@@ -58,9 +58,9 @@ public class DVIDUtils
 
 		// image size
 		final long[] dimensions = new long[] {
-				response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1,
-				response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1,
-				response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 };
+				( long ) ( response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1 ),
+				( long ) ( response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1 ),
+				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
 
