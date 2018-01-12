@@ -16,7 +16,6 @@ import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
@@ -34,26 +33,29 @@ import net.imglib2.util.ValuePair;
 
 public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 {
-	// base url to api
-	private final SimpleObjectProperty< String > dvid = new SimpleObjectProperty<>();
+	private final SimpleObjectProperty< String > dvidURL = new SimpleObjectProperty<>();
 
-	// commit
-	private final SimpleObjectProperty< String > commit = new SimpleObjectProperty<>();
+	private final SimpleObjectProperty< String > repoUUID = new SimpleObjectProperty<>();
 
-	// dataset
 	private final SimpleObjectProperty< String > dataset = new SimpleObjectProperty<>();
 
-	// combined error messages
+	// all error messages combined
 	private final SimpleObjectProperty< String > errorMessage = new SimpleObjectProperty<>();
 
-	// error message for invalid dvid url
-	private final SimpleObjectProperty< String > dvidError = new SimpleObjectProperty<>();
+	// no url defined
+	private final SimpleObjectProperty< String > dvidURLError = new SimpleObjectProperty<>();
 
-	// error message for invalid dataset
+	// no repository defined
+	private final SimpleObjectProperty< String > repoUUIDError = new SimpleObjectProperty<>();
+
+	// no dataset defined
 	private final SimpleObjectProperty< String > datasetError = new SimpleObjectProperty<>();
 
-	// error message for invalid commit
-	private final SimpleObjectProperty< String > commitError = new SimpleObjectProperty<>();
+	// couldn't find the repo informed
+	private final SimpleObjectProperty< String > invalidURLError = new SimpleObjectProperty<>();
+
+	// the number of dimensions is less than 3 or bigger than 5
+	private final SimpleObjectProperty< String > axisError = new SimpleObjectProperty<>();
 
 	private final SimpleObjectProperty< Effect > dvidErrorEffect = new SimpleObjectProperty<>();
 
@@ -61,47 +63,31 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
 
-	private final SimpleObjectProperty< String > repoError = new SimpleObjectProperty<>();
-
-	private final SimpleDoubleProperty resX = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty resY = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty resZ = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty offX = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty offY = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty offZ = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty min = new SimpleDoubleProperty( Double.NaN );
-
-	private final SimpleDoubleProperty max = new SimpleDoubleProperty( Double.NaN );
+	private final DatasetInfo datasetInfo = new DatasetInfo();
 
 	public BackendDialogDVID()
 	{
-		dvid.addListener( ( obs, oldv, newv ) -> {
+		dvidURL.addListener( ( obs, oldv, newv ) -> {
 			if ( newv != null && !newv.isEmpty() )
 			{
-				this.dvidError.set( null );
+				this.dvidURLError.set( null );
 				updateMetaInformation();
 			}
 			else
 			{
-				this.dvidError.set( "No valid dvid url." );
+				this.dvidURLError.set( "No valid dvid url." );
 			}
 		} );
 
-		commit.addListener( ( obs, oldv, newv ) -> {
+		repoUUID.addListener( ( obs, oldv, newv ) -> {
 			if ( newv != null && !newv.isEmpty() )
 			{
-				this.commitError.set( null );
+				this.repoUUIDError.set( null );
 				updateMetaInformation();
 			}
 			else
 			{
-				this.commitError.set( "No valid commit" );
+				this.repoUUIDError.set( "No valid commit" );
 			}
 		} );
 
@@ -117,31 +103,31 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			}
 		} );
 
-		dvidError.addListener( ( obs, oldv, newv ) -> this.dvidErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
-		commitError.addListener( ( obs, oldv, newv ) -> this.commitErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
+		dvidURLError.addListener( ( obs, oldv, newv ) -> this.dvidErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
+		repoUUIDError.addListener( ( obs, oldv, newv ) -> this.commitErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
 		datasetError.addListener( ( obs, oldv, newv ) -> this.datasetErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
 
 		this.errorMessages().forEach( em -> em.addListener( ( obs, oldv, newv ) -> combineErrorMessages() ) );
 
-		dvid.set( "" );
-		commit.set( "" );
+		dvidURL.set( "" );
+		repoUUID.set( "" );
 		dataset.set( "" );
 	}
 
 	@Override
 	public Node getDialogNode()
 	{
-		final TextField dvidURLField = new TextField( dvid.get() );
+		final TextField dvidURLField = new TextField( dvidURL.get() );
 		dvidURLField.setMinWidth( 0 );
 		dvidURLField.setMaxWidth( Double.POSITIVE_INFINITY );
 		dvidURLField.setPromptText( "dvid url" );
-		dvidURLField.textProperty().bindBidirectional( dvid );
+		dvidURLField.textProperty().bindBidirectional( dvidURL );
 
-		final TextField commitField = new TextField( commit.get() );
+		final TextField commitField = new TextField( repoUUID.get() );
 		commitField.setMinWidth( 0 );
 		commitField.setMaxWidth( Double.POSITIVE_INFINITY );
 		commitField.setPromptText( "commit" );
-		commitField.textProperty().bindBidirectional( commit );
+		commitField.textProperty().bindBidirectional( repoUUID );
 
 		final TextField datasetField = new TextField( dataset.get() );
 		datasetField.setMinWidth( 0 );
@@ -183,12 +169,12 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private void updateMetaInformation()
 	{
-		if ( ( dvid.get() != null ) && ( commit.get() != null ) && ( dataset.get() != null ) )
+		if ( ( dvidURL.get() != null ) && ( repoUUID.get() != null ) && ( dataset.get() != null ) )
 		{
-			if ( dvid.get().isEmpty() || commit.get().isEmpty() || dataset.get().isEmpty() )
+			if ( dvidURL.get().isEmpty() || repoUUID.get().isEmpty() || dataset.get().isEmpty() )
 				return;
 
-			String infoUrl = dvid.get() + "/" + commit.get() + "/" + dataset.get() + "/info";
+			String infoUrl = dvidURL.get() + "/" + repoUUID.get() + "/" + dataset.get() + "/info";
 			DVIDResponse response = null;
 			try
 			{
@@ -197,33 +183,37 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			catch ( JsonSyntaxException | JsonIOException | IOException e )
 			{
 
-				this.repoError.set( "no data/repository found" );
+				this.invalidURLError.set( "no data/repository found" );
 				return;
 			}
+			this.invalidURLError.set( "" );
 
-			this.repoError.set( "" );
-			if ( response.Extended.VoxelSize.length == 3 )
+			final int nDim = response.Extended.VoxelSize.length;
+			final AxisOrder ao = defaultAxisOrder( nDim );
+			if ( ao != null )
 			{
-				resX.set( response.Extended.VoxelSize[ 0 ] );
-				resY.set( response.Extended.VoxelSize[ 1 ] );
-				resZ.set( response.Extended.VoxelSize[ 2 ] );
+				this.datasetInfo.defaultAxisOrderProperty().set( ao );
+				this.datasetInfo.selectedAxisOrderProperty().set( ao );
+				this.axisError.set( "" );
 			}
+			else
+			{
+				this.axisError.set( "error on number of dimensions" );
+			}
+
+			if ( response.Extended.VoxelSize.length == 3 )
+				this.datasetInfo.setResolution( response.Extended.VoxelSize );
 
 			if ( response.Extended.MinPoint.length == 3 )
-			{
-				offX.set( response.Extended.MinPoint[ 0 ] );
-				offY.set( response.Extended.MinPoint[ 1 ] );
-				offZ.set( response.Extended.MinPoint[ 2 ] );
-			}
+				this.datasetInfo.setOffset( response.Extended.MinPoint );
 
 			String type = "";
 			if ( response.Extended.Values.size() > 0 )
 				type = response.Extended.Values.get( 0 ).DataType;
 
 			DataType datatype = DataType.fromString( type );
-			min.set( minForType( datatype ) );
-			max.set( maxForType( datatype ) );
-
+			this.datasetInfo.minProperty().set( minForType( datatype ) );
+			this.datasetInfo.maxProperty().set( maxForType( datatype ) );
 		}
 	}
 
@@ -236,7 +226,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	@Override
 	public Collection< ObservableValue< String > > errorMessages()
 	{
-		return Arrays.asList( this.dvidError, this.commitError, this.datasetError, this.repoError );
+		return Arrays.asList( this.dvidURLError, this.repoUUIDError, this.datasetError, this.invalidURLError, this.axisError );
 	}
 
 	@Override
@@ -245,60 +235,12 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return strings -> this.errorMessage.set( String.join( "\n", strings ) );
 	}
 
-	@Override
-	public DoubleProperty resolutionX()
-	{
-		return this.resX;
-	}
-
-	@Override
-	public DoubleProperty resolutionY()
-	{
-		return this.resY;
-	}
-
-	@Override
-	public DoubleProperty resolutionZ()
-	{
-		return this.resZ;
-	}
-
-	@Override
-	public DoubleProperty offsetX()
-	{
-		return this.offX;
-	}
-
-	@Override
-	public DoubleProperty offsetY()
-	{
-		return this.offY;
-	}
-
-	@Override
-	public DoubleProperty offsetZ()
-	{
-		return this.offZ;
-	}
-
-	@Override
-	public DoubleProperty min()
-	{
-		return this.min;
-	}
-
-	@Override
-	public DoubleProperty max()
-	{
-		return this.max;
-	}
-
 	@SuppressWarnings( "unchecked" )
 	@Override
 	public < T extends NativeType< T >, V extends Volatile< T > > Pair< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[] > getDataAndVolatile( SharedQueue sharedQueue, int priority ) throws IOException
 	{
-		final String url = this.dvid.get();
-		final String repoUUID = this.commit.get();
+		final String url = this.dvidURL.get();
+		final String repoUUID = this.repoUUID.get();
 		final String dataset = this.dataset.get();
 		final double[] offset = new double[] { offsetX().get(), offsetY().get(), offsetZ().get() };
 
@@ -335,9 +277,56 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return null;
 	}
 
+	@Override
+	public DoubleProperty resolutionX()
+	{
+		return this.datasetInfo.spatialResolutionProperties()[ 0 ];
+	}
+
+	@Override
+	public DoubleProperty resolutionY()
+	{
+		return this.datasetInfo.spatialResolutionProperties()[ 1 ];
+	}
+
+	@Override
+	public DoubleProperty resolutionZ()
+	{
+		return this.datasetInfo.spatialResolutionProperties()[ 2 ];
+	}
+
+	@Override
+	public DoubleProperty offsetX()
+	{
+		return this.datasetInfo.spatialOffsetProperties()[ 0 ];
+	}
+
+	@Override
+	public DoubleProperty offsetY()
+	{
+		return this.datasetInfo.spatialOffsetProperties()[ 1 ];
+	}
+
+	@Override
+	public DoubleProperty offsetZ()
+	{
+		return this.datasetInfo.spatialOffsetProperties()[ 2 ];
+	}
+
+	@Override
+	public DoubleProperty min()
+	{
+		return this.datasetInfo.minProperty();
+	}
+
+	@Override
+	public DoubleProperty max()
+	{
+		return this.datasetInfo.maxProperty();
+	}
+
 	private static double minForType( final DataType t )
 	{
-		// TODO ever return non-zero here?
 		return 0.0;
 	}
 
@@ -366,6 +355,21 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			return 1.0;
 		default:
 			return 1.0;
+		}
+	}
+
+	private AxisOrder defaultAxisOrder( final int nDim )
+	{
+		switch ( nDim )
+		{
+		case 3:
+			return AxisOrder.XYZ;
+		case 4:
+			return AxisOrder.XYZT;
+		case 5:
+			return AxisOrder.XYZCT;
+		default:
+			return null;
 		}
 	}
 }
