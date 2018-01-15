@@ -51,7 +51,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			final long[] gridPosition,
 			final int[] blockDimension ) throws IOException
 	{
-		final String urlString = makeUrl( gridPosition );
+		final String urlString = createRawURL( gridPosition );
 
 		final URL url = new URL( urlString );
 		final byte[] data = new byte[ blockSize[ 0 ] * blockSize[ 1 ] * blockSize[ 2 ] ];
@@ -69,15 +69,30 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		return dataBlock;
 	}
 
-	private String makeUrl( final long[] gridPosition )
+	private String createRawURL( final long[] gridPosition )
+	{
+		// <api URL>/node/<UUID>/<data name>/blocks/<block coord>/<spanX>
+		final StringBuffer buf = new StringBuffer( dvidURL );
+
+		buf.append( "/" );
+		buf.append( repoUUID );
+		buf.append( "/" );
+		buf.append( dataset );
+		buf.append( "/blocks/" );
+		buf.append( gridPosition[ 0 ] );
+		buf.append( "_" );
+		buf.append( gridPosition[ 1 ] );
+		buf.append( "_" );
+		buf.append( gridPosition[ 2 ] );
+		buf.append( "/1" );
+
+		return buf.toString();
+	}
+
+	private String createLabelURL( final long[] gridPosition )
 	{
 
 		// TODO:
-
-		// previous:
-		// <api URL>/node/<UUID>/<data name>/blocks/<block coord>/<spanX>
-		// -> works but it is slow
-
 		// Labelblk:
 		// <api URL>/node/<UUID>/<data name>/blocks/<size>/<offset>
 		// uint:
@@ -113,17 +128,17 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 	public void load( final SingleCellArrayImg< T, ? > cell )
 	{
 		final long[] gridPosition = new long[ cell.numDimensions() ];
-		final long[] cellMin = new long[ cell.numDimensions() ];
+		final long[] offset = new long[ cell.numDimensions() ];
 		for ( int d = 0; d < gridPosition.length; ++d )
 		{
 			gridPosition[ d ] = cell.min( d ) / blockSize[ d ];
-			cellMin[ d ] = cell.min( d );
+//			offset[ d ] = cell.min( d ) + minPoint;
 
 		}
 		final DataBlock< ? > block;
 		try
 		{
-			block = readBlock( cellMin, blockSize );
+			block = readBlock( gridPosition, blockSize );
 		}
 		catch ( final IOException e )
 		{
