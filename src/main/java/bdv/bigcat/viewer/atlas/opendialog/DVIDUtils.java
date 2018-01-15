@@ -1,23 +1,29 @@
 package bdv.bigcat.viewer.atlas.opendialog;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.LongFunction;
+import static net.imglib2.cache.img.PrimitiveType.BYTE;
+import static net.imglib2.cache.img.PrimitiveType.DOUBLE;
+import static net.imglib2.cache.img.PrimitiveType.FLOAT;
+import static net.imglib2.cache.img.PrimitiveType.INT;
+import static net.imglib2.cache.img.PrimitiveType.LONG;
+import static net.imglib2.cache.img.PrimitiveType.SHORT;
 
-import org.apache.commons.io.IOUtils;
+import java.io.IOException;
+
 import org.janelia.saalfeldlab.n5.DataType;
 
-import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.cache.Cache;
+import net.imglib2.cache.img.ArrayDataAccessFactory;
 import net.imglib2.cache.img.CachedCellImg;
-import net.imglib2.cache.img.DiskCachedCellImgFactory;
-import net.imglib2.cache.img.DiskCachedCellImgOptions;
-import net.imglib2.cache.img.DiskCachedCellImgOptions.CacheType;
-import net.imglib2.cache.util.IntervalKeyLoaderAsLongKeyLoader;
-import net.imglib2.img.basictypeaccess.volatiles.array.DirtyVolatileByteArray;
+import net.imglib2.cache.img.LoadedCellCacheLoader;
+import net.imglib2.cache.ref.SoftRefLoaderCache;
+import net.imglib2.img.basictypeaccess.array.ByteArray;
+import net.imglib2.img.basictypeaccess.array.DoubleArray;
+import net.imglib2.img.basictypeaccess.array.FloatArray;
+import net.imglib2.img.basictypeaccess.array.IntArray;
+import net.imglib2.img.basictypeaccess.array.LongArray;
+import net.imglib2.img.basictypeaccess.array.ShortArray;
+import net.imglib2.img.cell.Cell;
 import net.imglib2.img.cell.CellGrid;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -30,7 +36,6 @@ import net.imglib2.type.numeric.integer.UnsignedLongType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Intervals;
 
 public class DVIDUtils
 {
@@ -39,7 +44,7 @@ public class DVIDUtils
 	private DVIDUtils()
 	{}
 
-	@SuppressWarnings( { "unchecked" } )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static final < T extends NativeType< T > > RandomAccessibleInterval< T > openVolatile(
 			final String dvidURL,
 			final String repoUUID,
@@ -56,89 +61,86 @@ public class DVIDUtils
 
 		DVIDUtils.datatype = DataType.fromString( type );
 
-		// image size
+		// complete image size
 		final long[] dimensions = new long[] {
 				( long ) ( response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1 ),
 				( long ) ( response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1 ),
 				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
+		final double[] dimensionsD = new double[] {
+				( response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1 ),
+				( response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1 ),
+				( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
+
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
 
-		final BiConsumer< byte[], DirtyVolatileByteArray > copier = ( bytes, access ) -> {
-			System.arraycopy( bytes, 0, access.getCurrentStorageArray(), 0, bytes.length );
-			access.setDirty();
-		};
+		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, datatype );
 
-		// TODO: isotropic/0/1/2 ?
-		final String format = String.format( "%s/%s/%s/%s/%s/%s",
-				dvidURL, repoUUID, dataset, "isotropic/0_1_2",
-				"%d_%d_%d",
-				"%d_%d_%d" );
-
-		Function< Interval, String > addressComposer = interval -> {
-			final String address = String.format(
-					format,
-					( int ) interval.max( 0 ) - interval.min( 0 ) + 1,
-					( int ) interval.max( 1 ) - interval.min( 1 ) + 1,
-					( int ) interval.max( 2 ) - interval.min( 2 ) + 1,
-					( int ) offset[ 0 ] + interval.min( 0 ),
-					( int ) offset[ 1 ] + interval.min( 1 ),
-					( int ) offset[ 2 ] + interval.min( 2 ) );
-			return address;
-		};
-
-		final HTTPLoader< DirtyVolatileByteArray > functor = new HTTPLoader<>( addressComposer, ( n ) -> new DirtyVolatileByteArray( ( int ) n, true ), copier );
-
-		final IntervalKeyLoaderAsLongKeyLoader< DirtyVolatileByteArray > loader = new IntervalKeyLoaderAsLongKeyLoader<>( grid, functor );
-
-		final DiskCachedCellImgOptions factoryOptions = DiskCachedCellImgOptions.options()
-				.cacheType( CacheType.BOUNDED )
-				.maxCacheSize( 1000 )
-				.cellDimensions( blockSize );
-
-		CachedCellImg< T, ? > img;
+		final CachedCellImg< T, ? > img;
+		final T finalType;
+		final Cache< Long, Cell< ? > > cache;
 
 		switch ( datatype )
 		{
 		case INT8:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< ByteType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new ByteType(), loader );
+			finalType = ( T ) new ByteType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ByteArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE ) );
 			break;
 		case UINT8:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< UnsignedByteType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new UnsignedByteType(), loader );
+			finalType = ( T ) new UnsignedByteType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ByteArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE ) );
 			break;
 		case INT16:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< ShortType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new ShortType(), loader );
+			finalType = ( T ) new ShortType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ShortArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT ) );
 			break;
 		case UINT16:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< UnsignedShortType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new UnsignedShortType(), loader );
+			finalType = ( T ) new UnsignedShortType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ShortArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT ) );
 			break;
 		case INT32:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< IntType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new IntType(), loader );
+			finalType = ( T ) new IntType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< IntArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT ) );
 			break;
 		case UINT32:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< UnsignedIntType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new UnsignedIntType(), loader );
+			finalType = ( T ) new UnsignedIntType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< IntArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT ) );
 			break;
 		case INT64:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< LongType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new LongType(), loader );
+			finalType = ( T ) new LongType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< LongArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG ) );
 			break;
 		case UINT64:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< UnsignedLongType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new UnsignedLongType(), loader );
+			finalType = ( T ) new UnsignedLongType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< LongArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG ) );
 			break;
 		case FLOAT32:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< FloatType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new FloatType(), loader );
+			finalType = ( T ) new FloatType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< FloatArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( FLOAT ) );
 			break;
 		case FLOAT64:
-			img = ( CachedCellImg< T, ? > ) new DiskCachedCellImgFactory< DoubleType >( factoryOptions )
-					.createWithCacheLoader( dimensions, new DoubleType(), loader );
+			finalType = ( T ) new DoubleType();
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< DoubleArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( DOUBLE ) );
 			break;
 		default:
 			img = null;
@@ -147,48 +149,4 @@ public class DVIDUtils
 		return img;
 	}
 
-	public static class HTTPLoader< A > implements Function< Interval, A >
-	{
-
-		private final Function< Interval, String > addressComposer;
-
-		private final LongFunction< A > accessFactory;
-
-		private final BiConsumer< byte[], A > copyToAccess;
-
-		public HTTPLoader(
-				final Function< Interval, String > addressComposer,
-				final LongFunction< A > accessFactory,
-				final BiConsumer< byte[], A > copyToAccess )
-		{
-			super();
-			this.addressComposer = addressComposer;
-			this.accessFactory = accessFactory;
-			this.copyToAccess = copyToAccess;
-		}
-
-		@Override
-		public A apply( final Interval interval )
-		{
-			try
-			{
-				final String address = addressComposer.apply( interval );
-				final URL url = new URL( address );
-				final InputStream stream = url.openStream();
-				final long numElements = Intervals.numElements( interval );
-				final byte[] response = IOUtils.toByteArray( stream );
-
-				final A access = accessFactory.apply( numElements );
-				copyToAccess.accept( response, access );
-
-				return access;
-			}
-			catch ( final Exception e )
-			{
-				throw new RuntimeException( e );
-			}
-
-		}
-
-	}
 }
