@@ -52,6 +52,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			final int[] blockDimension ) throws IOException
 	{
 		final String urlString = makeUrl( gridPosition );
+
 		final URL url = new URL( urlString );
 		final byte[] data = new byte[ blockSize[ 0 ] * blockSize[ 1 ] * blockSize[ 2 ] ];
 		final InputStream in = url.openStream();
@@ -62,32 +63,49 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			off += l;
 		}
 		while ( l > 0 && off < data.length );
-
 		in.close();
 
-		// TODO: change for the corrected datatype here
 		DataBlock< ? > dataBlock = new ByteArrayDataBlock( blockDimension, gridPosition, data );
-		
 		return dataBlock;
 	}
 
 	private String makeUrl( final long[] gridPosition )
 	{
+
+		// TODO:
+
+		// previous:
+		// <api URL>/node/<UUID>/<data name>/blocks/<block coord>/<spanX>
+		// -> works but it is slow
+
+		// Labelblk:
+		// <api URL>/node/<UUID>/<data name>/blocks/<size>/<offset>
+		// uint:
+		// <api URL>/node/<UUID>/<data name>/subvolblocks/<size>/<offset>
+
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
 		buf.append( "/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
 		buf.append( dataset );
-		buf.append( "/blocks/" );
+		buf.append( "/subvolblocks/" );
+//		buf.append( gridPosition[ 0 ] );
+		buf.append( blockSize[ 0 ] );
+		buf.append( "_" );
+//		buf.append( gridPosition[ 1 ] );
+		buf.append( blockSize[ 1 ] );
+		buf.append( "_" );
+//		buf.append( gridPosition[ 2 ] );
+		buf.append( blockSize[ 2 ] );
+//		buf.append( "/1" );
+		buf.append( "/" );
 		buf.append( gridPosition[ 0 ] );
 		buf.append( "_" );
 		buf.append( gridPosition[ 1 ] );
 		buf.append( "_" );
 		buf.append( gridPosition[ 2 ] );
-		buf.append( "/1" );
 
-		System.out.println( "string url: " + buf.toString() );
 		return buf.toString();
 	}
 
@@ -95,13 +113,17 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 	public void load( final SingleCellArrayImg< T, ? > cell )
 	{
 		final long[] gridPosition = new long[ cell.numDimensions() ];
+		final long[] cellMin = new long[ cell.numDimensions() ];
 		for ( int d = 0; d < gridPosition.length; ++d )
+		{
 			gridPosition[ d ] = cell.min( d ) / blockSize[ d ];
+			cellMin[ d ] = cell.min( d );
+
+		}
 		final DataBlock< ? > block;
 		try
 		{
-			block = readBlock( gridPosition, blockSize );
-			System.out.println( "block: " + block );
+			block = readBlock( cellMin, blockSize );
 		}
 		catch ( final IOException e )
 		{
@@ -110,7 +132,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 		if ( block != null )
 			copyFromBlock.accept( cell, block );
-
 	}
 
 	public static < T extends NativeType< T > > BiConsumer< Img< T >, DataBlock< ? > > createCopy( final DataType dataType )
