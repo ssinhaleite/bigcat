@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.janelia.saalfeldlab.n5.DataType;
 
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 
+import bdv.bigcat.viewer.state.FragmentSegmentAssignmentOnlyLocal;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
@@ -64,6 +66,8 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
 
 	private final DatasetInfo datasetInfo = new DatasetInfo();
+
+	private DVIDResponse response = null;
 
 	public BackendDialogDVID()
 	{
@@ -175,7 +179,6 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 				return;
 
 			String infoUrl = dvidURL.get() + "/" + repoUUID.get() + "/" + dataset.get() + "/info";
-			DVIDResponse response = null;
 			try
 			{
 				response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
@@ -246,35 +249,32 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset );
 		final RandomAccessibleInterval< V > vraw = VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
+
 		return new ValuePair<>( new RandomAccessibleInterval[] { raw }, new RandomAccessibleInterval[] { vraw } );
 	}
 
 	@Override
-	public boolean isLabelType() throws Exception
+	public boolean isLabelType() throws IOException
 	{
-		// TODO Auto-generated method stub
-		return false;
+		return isLabelType( getDataType() );
 	}
 
 	@Override
-	public boolean isLabelMultisetType() throws Exception
+	public boolean isLabelMultisetType() throws IOException
 	{
-		// TODO Auto-generated method stub
-		return false;
+		return isLabelMultisetType( getDataType() );
 	}
 
 	@Override
-	public boolean isIntegerType() throws Exception
+	public boolean isIntegerType() throws IOException
 	{
-		// TODO Auto-generated method stub
-		return false;
+		return isIntegerType( getDataType() );
 	}
 
 	@Override
 	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return Stream.generate( FragmentSegmentAssignmentOnlyLocal::new ).iterator();
 	}
 
 	@Override
@@ -370,6 +370,48 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			return AxisOrder.XYZCT;
 		default:
 			return null;
+		}
+	}
+
+	private DataType getDataType()
+	{
+		DataType datatype = null;
+
+		if ( response != null )
+			if ( response.Extended.Values.size() > 0 )
+			{
+				String type = response.Extended.Values.get( 0 ).DataType;
+				datatype = DataType.fromString( type );
+			}
+
+		return datatype;
+	}
+
+	private static boolean isLabelType( final DataType type )
+	{
+		return isLabelMultisetType( type ) || isIntegerType( type );
+	}
+
+	private static boolean isLabelMultisetType( final DataType type )
+	{
+		return false;
+	}
+
+	private static boolean isIntegerType( final DataType type )
+	{
+		switch ( type )
+		{
+		case INT8:
+		case INT16:
+		case INT32:
+		case INT64:
+		case UINT8:
+		case UINT16:
+		case UINT32:
+		case UINT64:
+			return true;
+		default:
+			return false;
 		}
 	}
 }
