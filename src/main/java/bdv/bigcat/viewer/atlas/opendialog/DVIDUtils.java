@@ -1,5 +1,6 @@
 package bdv.bigcat.viewer.atlas.opendialog;
 
+import static net.imglib2.cache.img.AccessFlags.VOLATILE;
 import static net.imglib2.cache.img.PrimitiveType.BYTE;
 import static net.imglib2.cache.img.PrimitiveType.DOUBLE;
 import static net.imglib2.cache.img.PrimitiveType.FLOAT;
@@ -17,12 +18,12 @@ import net.imglib2.cache.img.ArrayDataAccessFactory;
 import net.imglib2.cache.img.CachedCellImg;
 import net.imglib2.cache.img.LoadedCellCacheLoader;
 import net.imglib2.cache.ref.SoftRefLoaderCache;
-import net.imglib2.img.basictypeaccess.array.ByteArray;
-import net.imglib2.img.basictypeaccess.array.DoubleArray;
-import net.imglib2.img.basictypeaccess.array.FloatArray;
-import net.imglib2.img.basictypeaccess.array.IntArray;
-import net.imglib2.img.basictypeaccess.array.LongArray;
-import net.imglib2.img.basictypeaccess.array.ShortArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileByteArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileDoubleArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileFloatArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileIntArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileLongArray;
+import net.imglib2.img.basictypeaccess.volatiles.array.VolatileShortArray;
 import net.imglib2.img.cell.Cell;
 import net.imglib2.img.cell.CellGrid;
 import net.imglib2.type.NativeType;
@@ -67,13 +68,7 @@ public class DVIDUtils
 				( long ) ( response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1 ),
 				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
-		final double[] dimensionsD = new double[] {
-				( response.Extended.MaxPoint[ 0 ] - response.Extended.MinPoint[ 0 ] + 1 ),
-				( response.Extended.MaxPoint[ 1 ] - response.Extended.MinPoint[ 1 ] + 1 ),
-				( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
-
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
-
 		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, datatype );
 
 		final CachedCellImg< T, ? > img;
@@ -84,63 +79,63 @@ public class DVIDUtils
 		{
 		case INT8:
 			finalType = ( T ) new ByteType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ByteArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileByteArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE, VOLATILE ) );
 			break;
 		case UINT8:
 			finalType = ( T ) new UnsignedByteType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ByteArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileByteArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( BYTE, VOLATILE ) );
 			break;
 		case INT16:
 			finalType = ( T ) new ShortType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ShortArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileShortArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT, VOLATILE ) );
 			break;
 		case UINT16:
 			finalType = ( T ) new UnsignedShortType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< ShortArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileShortArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( SHORT, VOLATILE ) );
 			break;
 		case INT32:
 			finalType = ( T ) new IntType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< IntArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileIntArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT, VOLATILE ) );
 			break;
 		case UINT32:
 			finalType = ( T ) new UnsignedIntType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< IntArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileIntArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( INT, VOLATILE ) );
 			break;
 		case INT64:
 			finalType = ( T ) new LongType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< LongArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileLongArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG, VOLATILE ) );
 			break;
 		case UINT64:
 			finalType = ( T ) new UnsignedLongType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< LongArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileLongArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( LONG, VOLATILE ) );
 			break;
 		case FLOAT32:
 			finalType = ( T ) new FloatType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< FloatArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( FLOAT ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileFloatArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( FLOAT, VOLATILE ) );
 			break;
 		case FLOAT64:
 			finalType = ( T ) new DoubleType();
-			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< DoubleArray > >()
-					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType ) );
-			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( DOUBLE ) );
+			cache = ( Cache ) new SoftRefLoaderCache< Long, Cell< VolatileDoubleArray > >()
+					.withLoader( LoadedCellCacheLoader.get( grid, loader, finalType, VOLATILE ) );
+			img = new CachedCellImg( grid, finalType, cache, ArrayDataAccessFactory.get( DOUBLE, VOLATILE ) );
 			break;
 		default:
 			img = null;
@@ -148,5 +143,4 @@ public class DVIDUtils
 
 		return img;
 	}
-
 }
