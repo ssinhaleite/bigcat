@@ -55,6 +55,8 @@ public class DVIDUtils
 		String infoUrl = dvidURL + "/" + repoUUID + "/" + dataset + "/info";
 		final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
 		final int[] blockSize = new int[] { response.Extended.BlockSize[ 0 ], response.Extended.BlockSize[ 1 ], response.Extended.BlockSize[ 2 ] };
+		final double[] voxelSize = new double[] { response.Extended.VoxelSize[ 0 ], response.Extended.VoxelSize[ 1 ], response.Extended.VoxelSize[ 2 ] };
+		final double[] minPoint = new double[] { response.Extended.MinPoint[ 0 ], response.Extended.MinPoint[ 1 ], response.Extended.MinPoint[ 2 ] };
 
 		String type = "";
 		if ( response.Extended.Values.size() > 0 )
@@ -69,7 +71,7 @@ public class DVIDUtils
 				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
-		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, datatype );
+		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype );
 
 		final CachedCellImg< T, ? > img;
 		final T finalType;
