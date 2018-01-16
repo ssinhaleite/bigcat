@@ -31,6 +31,10 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 	private final int[] blockSize;
 
+	private final double[] voxelSize;
+
+	private final double[] minPoint;
+
 	private final BiConsumer< Img< T >, DataBlock< ? > > copyFromBlock;
 
 	public DVIDLoader(
@@ -38,12 +42,16 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			final String repoUUID,
 			final String dataset,
 			final int[] blockSize,
+			final double[] voxelSize,
+			final double[] minPoint,
 			final DataType dataType )
 	{
 		this.dvidURL = dvidURL;
 		this.repoUUID = repoUUID;
 		this.dataset = dataset;
 		this.blockSize = blockSize;
+		this.voxelSize = voxelSize;
+		this.minPoint = minPoint;
 		this.copyFromBlock = createCopy( dataType );
 	}
 
@@ -52,6 +60,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			final int[] blockDimension ) throws IOException
 	{
 		final String urlString = createRawURL( gridPosition );
+		System.out.println( "url: " + urlString );
 
 		final URL url = new URL( urlString );
 		final byte[] data = new byte[ blockSize[ 0 ] * blockSize[ 1 ] * blockSize[ 2 ] ];
@@ -91,12 +100,16 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 	private String createLabelURL( final long[] gridPosition )
 	{
-
 		// TODO:
 		// Labelblk:
 		// <api URL>/node/<UUID>/<data name>/blocks/<size>/<offset>
+		// size: Size in voxels along each dimension specified in <dims>.
+		// offset: Gives coordinate of first voxel using dimensionality of data.
+
 		// uint:
 		// <api URL>/node/<UUID>/<data name>/subvolblocks/<size>/<offset>
+		// size: Size in voxels along each dimension specified in <dims>.
+		// offset: Gives coordinate of first voxel using dimensionality of data.
 
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
@@ -105,15 +118,11 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		buf.append( "/" );
 		buf.append( dataset );
 		buf.append( "/subvolblocks/" );
-//		buf.append( gridPosition[ 0 ] );
-		buf.append( blockSize[ 0 ] );
+		buf.append( ( int ) ( blockSize[ 0 ] * voxelSize[ 0 ] ) );
 		buf.append( "_" );
-//		buf.append( gridPosition[ 1 ] );
-		buf.append( blockSize[ 1 ] );
+		buf.append( ( int ) ( blockSize[ 1 ] * voxelSize[ 1 ] ) );
 		buf.append( "_" );
-//		buf.append( gridPosition[ 2 ] );
-		buf.append( blockSize[ 2 ] );
-//		buf.append( "/1" );
+		buf.append( ( int ) ( blockSize[ 2 ] * voxelSize[ 2 ] ) );
 		buf.append( "/" );
 		buf.append( gridPosition[ 0 ] );
 		buf.append( "_" );
@@ -132,9 +141,12 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		for ( int d = 0; d < gridPosition.length; ++d )
 		{
 			gridPosition[ d ] = cell.min( d ) / blockSize[ d ];
-//			offset[ d ] = cell.min( d ) + minPoint;
-
+			offset[ d ] = ( long ) ( cell.min( d ) + minPoint[ d ] );
 		}
+
+		System.out.println( "gridPosition: " + gridPosition[ 0 ] + " " + gridPosition[ 1 ] + " " + gridPosition[ 2 ] );
+		System.out.println( "cellMin: " + offset[ 0 ] + " " + offset[ 1 ] + " " + offset[ 2 ] );
+
 		final DataBlock< ? > block;
 		try
 		{
