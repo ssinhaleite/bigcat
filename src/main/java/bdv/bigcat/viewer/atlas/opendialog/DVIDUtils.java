@@ -53,7 +53,7 @@ public class DVIDUtils
 			final double[] offset,
 			final boolean isRaw ) throws IOException
 	{
-		String infoUrl = dvidURL + "/" + repoUUID + "/" + dataset + "/info";
+		String infoUrl = dvidURL + "/api/node/" + repoUUID + "/" + dataset + "/info";
 		final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
 		final int[] blockSize = new int[] { response.Extended.BlockSize[ 0 ], response.Extended.BlockSize[ 1 ], response.Extended.BlockSize[ 2 ] };
 		final double[] voxelSize = new double[] { response.Extended.VoxelSize[ 0 ], response.Extended.VoxelSize[ 1 ], response.Extended.VoxelSize[ 2 ] };

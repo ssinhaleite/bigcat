@@ -181,7 +181,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			if ( dvidURL.get().isEmpty() || repoUUID.get().isEmpty() || dataset.get().isEmpty() )
 				return;
 
-			String infoUrl = dvidURL.get() + "/" + repoUUID.get() + "/" + dataset.get() + "/info";
+			String infoUrl = dvidURL.get() + "/api/node/" + repoUUID.get() + "/" + dataset.get() + "/info";
 			try
 			{
 				response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
