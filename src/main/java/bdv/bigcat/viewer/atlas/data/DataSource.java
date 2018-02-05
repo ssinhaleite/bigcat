@@ -408,7 +408,9 @@ public interface DataSource< D, T > extends Source< T >
 			final SharedQueue sharedQueue,
 			final int priority ) throws IOException
 	{
-		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset );
+		System.out.println( "calling method from datasource.java" );
+		// TODO: added parameter to compile
+		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset, true );
 
 		final T t = Util.getTypeFromInterval( raw );
 		@SuppressWarnings( "unchecked" )
