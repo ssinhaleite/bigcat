@@ -62,7 +62,6 @@ public class BackendDialogHDF5 extends BackendDialogGroupAndDataset implements C
 		if ( clazz.isAssignableFrom( byte.class ) || clazz.isAssignableFrom( short.class ) || clazz.isAssignableFrom( int.class ) || clazz.isAssignableFrom( long.class ) )
 			return true;
 		return false;
-
 	}
 
 	private static < T > double minForType( final Class< T > clazz, final boolean signed )
@@ -84,6 +83,7 @@ public class BackendDialogHDF5 extends BackendDialogGroupAndDataset implements C
 		return 1.0;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
 	public < T extends NativeType< T >, V extends Volatile< T > > Pair< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[] > getDataAndVolatile(
 			final SharedQueue sharedQueue,
