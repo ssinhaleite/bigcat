@@ -264,7 +264,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		case INT64:
 		case UINT64:
 			return ( a, b ) -> {
-				System.out.println( "tyeste" );
 				final long[] data = ( long[] ) b.getData();
 				System.out.println( "data: " + data );
 				@SuppressWarnings( "unchecked" )
