@@ -83,7 +83,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		// from given block coordinate.
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
-		buf.append( "/" );
+		buf.append( "/api/node/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
 		buf.append( dataset );
@@ -105,7 +105,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
-		buf.append( "/" );
+		buf.append( "/api/node/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
 		buf.append( dataset );
@@ -133,7 +133,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
-		buf.append( "/" );
+		buf.append( "/api/node/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
 		buf.append( dataset );
@@ -172,7 +172,7 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
-		buf.append( "/" );
+		buf.append( "/api/node/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
 		buf.append( dataset );
@@ -264,7 +264,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		case INT64:
 		case UINT64:
 			return ( a, b ) -> {
-				System.out.println( "tyeste" );
 				final long[] data = ( long[] ) b.getData();
 				System.out.println( "data: " + data );
 				@SuppressWarnings( "unchecked" )
