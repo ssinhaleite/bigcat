@@ -12,6 +12,7 @@ import org.janelia.saalfeldlab.n5.DataType;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 
+import bdv.bigcat.viewer.atlas.opendialog.OpenSourceDialog.TYPE;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentOnlyLocal;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
 import bdv.util.volatiles.SharedQueue;
@@ -68,6 +69,8 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	private final DatasetInfo datasetInfo = new DatasetInfo();
 
 	private DVIDResponse response = null;
+
+	private TYPE type = TYPE.RAW;
 
 	public BackendDialogDVID()
 	{
@@ -246,11 +249,14 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		final String repoUUID = this.repoUUID.get();
 		final String dataset = this.dataset.get();
 		final double[] offset = new double[] { offsetX().get(), offsetY().get(), offsetZ().get() };
+		boolean isRaw = true;
+		if ( type == TYPE.LABEL )
+			isRaw = false;
 
-		final RandomAccessibleInterval< T > raw = DVIDUtils.openVolatile( url, repoUUID, dataset, offset );
-		final RandomAccessibleInterval< V > vraw = VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
+		final RandomAccessibleInterval< T > rai = DVIDUtils.openVolatile( url, repoUUID, dataset, offset, isRaw );
+		final RandomAccessibleInterval< V > vrai = VolatileViews.wrapAsVolatile( rai, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
 
-		return new ValuePair<>( new RandomAccessibleInterval[] { raw }, new RandomAccessibleInterval[] { vraw } );
+		return new ValuePair<>( new RandomAccessibleInterval[] { rai }, new RandomAccessibleInterval[] { vrai } );
 	}
 
 	@Override
@@ -323,6 +329,11 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	public DoubleProperty max()
 	{
 		return this.datasetInfo.maxProperty();
+	}
+
+	public void typeChanged( final TYPE type )
+	{
+		this.type = type;
 	}
 
 	private static double minForType( final DataType t )
