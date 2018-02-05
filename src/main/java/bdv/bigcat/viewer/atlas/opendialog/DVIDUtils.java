@@ -50,7 +50,8 @@ public class DVIDUtils
 			final String dvidURL,
 			final String repoUUID,
 			final String dataset,
-			final double[] offset ) throws IOException
+			final double[] offset,
+			final boolean isRaw ) throws IOException
 	{
 		String infoUrl = dvidURL + "/" + repoUUID + "/" + dataset + "/info";
 		final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
@@ -71,7 +72,7 @@ public class DVIDUtils
 				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
-		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype );
+		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype, isRaw );
 
 		final CachedCellImg< T, ? > img;
 		final T finalType;
