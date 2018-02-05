@@ -68,7 +68,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		{
 			l = in.read( data, off, data.length - off );
 			off += l;
-			System.out.println( "l, off: " + l + off );
 		}
 		while ( l > 0 && off < data.length );
 		in.close();
@@ -246,7 +245,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			};
 		case INT16:
 		case UINT16:
-			System.out.print( "int16/uint16" );
 			return ( a, b ) -> {
 				final short[] data = ( short[] ) b.getData();
 				@SuppressWarnings( "unchecked" )
@@ -265,7 +263,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			};
 		case INT64:
 		case UINT64:
-			System.out.println( "int64/uint64" );
 			return ( a, b ) -> {
 				System.out.println( "tyeste" );
 				final long[] data = ( long[] ) b.getData();
