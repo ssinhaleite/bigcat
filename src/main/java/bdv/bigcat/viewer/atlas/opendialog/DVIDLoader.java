@@ -68,14 +68,11 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 		{
 			l = in.read( data, off, data.length - off );
 			off += l;
-			System.out.println( "l, off: " + l + off );
 		}
 		while ( l > 0 && off < data.length );
 		in.close();
 
 		DataBlock< ? > dataBlock = new ByteArrayDataBlock( blockSize, gridPosition, data );
-		System.out.println( "datablock: " + dataBlock );
-		System.out.println( "datablock size: " + dataBlock.getSize()[ 0 ] + " " + dataBlock.getSize()[ 1 ] + " " + dataBlock.getSize()[ 2 ] );
 		return dataBlock;
 	}
 
@@ -211,9 +208,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			offset[ d ] = ( long ) ( cell.min( d ) + minPoint[ d ] );
 		}
 
-		System.out.println( "gridPosition: " + gridPosition[ 0 ] + " " + gridPosition[ 1 ] + " " + gridPosition[ 2 ] );
-		System.out.println( "cellMin: " + offset[ 0 ] + " " + offset[ 1 ] + " " + offset[ 2 ] );
-
 		final DataBlock< ? > block;
 		final byte[] data = new byte[ blockSize[ 0 ] * blockSize[ 1 ] * blockSize[ 2 ] ];
 
@@ -225,7 +219,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			else
 				urlString = createRawURL( offset );
 
-			System.out.println( "url: " + urlString );
 			block = readBlock( urlString, gridPosition, data );
 		}
 		catch ( final IOException e )
@@ -252,7 +245,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			};
 		case INT16:
 		case UINT16:
-			System.out.print( "int16/uint16" );
 			return ( a, b ) -> {
 				final short[] data = ( short[] ) b.getData();
 				@SuppressWarnings( "unchecked" )
@@ -271,7 +263,6 @@ public class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 			};
 		case INT64:
 		case UINT64:
-			System.out.println( "int64/uint64" );
 			return ( a, b ) -> {
 				System.out.println( "tyeste" );
 				final long[] data = ( long[] ) b.getData();
