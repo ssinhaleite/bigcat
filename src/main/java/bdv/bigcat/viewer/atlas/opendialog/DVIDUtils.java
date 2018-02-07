@@ -80,7 +80,11 @@ public class DVIDUtils
 				( long ) ( response.Extended.MaxPoint[ 2 ] - response.Extended.MinPoint[ 2 ] + 1 ) };
 
 		final CellGrid grid = new CellGrid( dimensions, blockSize );
-		final DVIDLoader< T > loader = new DVIDLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype, isRaw );
+		final DVIDLoader< T > loader;
+		if ( isRaw )
+			loader = new DVIDUintblkLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype );
+		else
+			loader = new DVIDLabelblkLoader<>( dvidURL, repoUUID, dataset, blockSize, voxelSize, minPoint, datatype );
 
 		final CachedCellImg< T, ? > img;
 		final T finalType;
