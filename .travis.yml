@@ -16,6 +16,10 @@ cache:
 install:
   - sudo apt install -y libzmq3-dev
   - cd ..
+  - git clone https://github.com/saalfeldlab/n5-hdf5.git
+  - cd n5-hdf5
+  - mvn clean install
+  - cd ..
   - git clone https://github.com/zeromq/jzmq.git
   - cd jzmq/jzmq-jni
   - ./autogen.sh
