@@ -34,18 +34,6 @@ public class DVIDLabelblkLoader< T extends NativeType< T > > extends DVIDLoader<
 
 		final StringBuffer buf = new StringBuffer( dvidURL );
 
-//		buf.append( "/api/node/" );
-//		buf.append( repoUUID );
-//		buf.append( "/" );
-//		buf.append( dataset );
-//		buf.append( "/blocks/" );
-//		buf.append( gridPosition[ 0 ] );
-//		buf.append( "_" );
-//		buf.append( gridPosition[ 1 ] );
-//		buf.append( "_" );
-//		buf.append( gridPosition[ 2 ] );
-//		buf.append( "/1" );
-
 		buf.append( "/api/node/" );
 		buf.append( repoUUID );
 		buf.append( "/" );
