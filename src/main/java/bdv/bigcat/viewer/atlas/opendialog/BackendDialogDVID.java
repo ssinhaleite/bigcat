@@ -3,6 +3,8 @@ package bdv.bigcat.viewer.atlas.opendialog;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -14,23 +16,30 @@ import com.google.gson.JsonSyntaxException;
 import bdv.bigcat.viewer.atlas.opendialog.OpenSourceDialog.TYPE;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentOnlyLocal;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
+import bdv.net.imglib2.util.Triple;
+import bdv.net.imglib2.util.ValueTriple;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableStringValue;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.Effect;
+import javafx.scene.effect.InnerShadow;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.paint.Color;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.Volatile;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
-import net.imglib2.util.ValuePair;
 
 public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 {
@@ -59,14 +68,24 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	// error message for invalid dataset
 	private final SimpleObjectProperty< String > datasetError = new SimpleObjectProperty<>();
 
-	// error message for invalid commit
-	private final SimpleObjectProperty< String > commitError = new SimpleObjectProperty<>();
-
 	private final SimpleObjectProperty< Effect > dvidErrorEffect = new SimpleObjectProperty<>();
 
 	private final SimpleObjectProperty< Effect > commitErrorEffect = new SimpleObjectProperty<>();
 
 	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
+
+	private final Effect textFieldErrorEffect = new InnerShadow( 10, Color.ORANGE );
+
+	private final Effect textFieldNoErrorEffect = new TextField().getEffect();
+
+	private final StringBinding name = Bindings.createStringBinding( () -> {
+		final String[] entries = Optional
+				.ofNullable( dataset )
+				.map( d -> d.get().split( "/" ) )
+				.map( a -> a.length > 0 ? a : new String[] { null } )
+				.orElse( new String[] { null } );
+		return entries[ entries.length - 1 ];
+	}, dataset );
 
 	private final DatasetInfo datasetInfo = new DatasetInfo();
 
@@ -170,7 +189,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 		textField.focusedProperty().addListener( ( obs, oldv, newv ) -> {
 			if ( newv )
-				textField.setEffect( BackendDialog.textFieldNoErrorEffect );
+				textField.setEffect( textFieldNoErrorEffect );
 			else
 				textField.setEffect( effect.get() );
 		} );
@@ -196,24 +215,11 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			}
 			this.invalidURLError.set( "" );
 
-			final int nDim = response.Extended.VoxelSize.length;
-			final AxisOrder ao = defaultAxisOrder( nDim );
-			if ( ao != null )
-			{
-				this.datasetInfo.defaultAxisOrderProperty().set( ao );
-				this.datasetInfo.selectedAxisOrderProperty().set( ao );
-				this.axisError.set( "" );
-			}
-			else
-			{
-				this.axisError.set( "error on number of dimensions" );
-			}
-
 			if ( response.Extended.VoxelSize.length == 3 )
-				this.datasetInfo.setResolution( response.Extended.VoxelSize );
+				setResolution( response.Extended.VoxelSize );
 
 			if ( response.Extended.MinPoint.length == 3 )
-				this.datasetInfo.setOffset( response.Extended.MinPoint );
+				setOffset( response.Extended.MinPoint );
 
 			String type = "";
 			if ( response.Extended.Values.size() > 0 )
@@ -245,12 +251,20 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	@SuppressWarnings( "unchecked" )
 	@Override
-	public < T extends NativeType< T >, V extends Volatile< T > > Pair< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[] > getDataAndVolatile( SharedQueue sharedQueue, int priority ) throws IOException
+	public < T extends NativeType< T >, V extends Volatile< T > > Triple< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[], AffineTransform3D[] > getDataAndVolatile( SharedQueue sharedQueue, int priority ) throws IOException
 	{
 		final String url = this.dvidURL.get();
 		final String repoUUID = this.repoUUID.get();
 		final String dataset = this.dataset.get();
-		final double[] offset = new double[] { offsetX().get(), offsetY().get(), offsetZ().get() };
+		final double[] resolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
+		final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
+		final AffineTransform3D transform = new AffineTransform3D();
+		transform.set(
+				resolution[ 0 ], 0, 0, offset[ 0 ],
+				0, resolution[ 1 ], 0, offset[ 1 ],
+				0, 0, resolution[ 2 ], offset[ 2 ] );
+		LOG.debug( "Resolution={}", Arrays.toString( resolution ) );
+
 		boolean isRaw = true;
 		if ( type == TYPE.LABEL )
 			isRaw = false;
@@ -258,7 +272,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		final RandomAccessibleInterval< T > rai = DVIDUtils.openVolatile( url, repoUUID, dataset, offset, isRaw );
 		final RandomAccessibleInterval< V > vrai = VolatileViews.wrapAsVolatile( rai, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
 
-		return new ValuePair<>( new RandomAccessibleInterval[] { rai }, new RandomAccessibleInterval[] { vrai } );
+		return new ValueTriple<>( new RandomAccessibleInterval[] { rai }, new RandomAccessibleInterval[] { vrai }, new AffineTransform3D[] { transform } );
 	}
 
 	@Override
@@ -280,48 +294,6 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	}
 
 	@Override
-	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
-	{
-		return Stream.generate( FragmentSegmentAssignmentOnlyLocal::new ).iterator();
-	}
-
-	@Override
-	public DoubleProperty resolutionX()
-	{
-		return this.datasetInfo.spatialResolutionProperties()[ 0 ];
-	}
-
-	@Override
-	public DoubleProperty resolutionY()
-	{
-		return this.datasetInfo.spatialResolutionProperties()[ 1 ];
-	}
-
-	@Override
-	public DoubleProperty resolutionZ()
-	{
-		return this.datasetInfo.spatialResolutionProperties()[ 2 ];
-	}
-
-	@Override
-	public DoubleProperty offsetX()
-	{
-		return this.datasetInfo.spatialOffsetProperties()[ 0 ];
-	}
-
-	@Override
-	public DoubleProperty offsetY()
-	{
-		return this.datasetInfo.spatialOffsetProperties()[ 1 ];
-	}
-
-	@Override
-	public DoubleProperty offsetZ()
-	{
-		return this.datasetInfo.spatialOffsetProperties()[ 2 ];
-	}
-
-	@Override
 	public DoubleProperty min()
 	{
 		return this.datasetInfo.minProperty();
@@ -333,6 +305,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return this.datasetInfo.maxProperty();
 	}
 
+	@Override
 	public void typeChanged( final TYPE type )
 	{
 		this.type = type;
@@ -368,21 +341,6 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			return 1.0;
 		default:
 			return 1.0;
-		}
-	}
-
-	private AxisOrder defaultAxisOrder( final int nDim )
-	{
-		switch ( nDim )
-		{
-		case 3:
-			return AxisOrder.XYZ;
-		case 4:
-			return AxisOrder.XYZT;
-		case 5:
-			return AxisOrder.XYZCT;
-		default:
-			return null;
 		}
 	}
 
@@ -427,4 +385,35 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			return false;
 		}
 	}
+
+	@Override
+	public DoubleProperty[] resolution()
+	{
+		return this.datasetInfo.spatialResolutionProperties();
+	}
+
+	@Override
+	public DoubleProperty[] offset()
+	{
+		return this.datasetInfo.spatialOffsetProperties();
+	}
+
+	@Override
+	public ObservableStringValue nameProperty()
+	{
+		return this.name;
+	}
+
+	@Override
+	public String identifier()
+	{
+		return "DVID";
+	}
+
+	@Override
+	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
+	{
+		return Stream.generate( FragmentSegmentAssignmentOnlyLocal::new ).iterator();
+	}
+
 }

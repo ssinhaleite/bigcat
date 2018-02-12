@@ -179,6 +179,10 @@ public class OpenSourceDialog extends Dialog< BackendDialog > implements Combine
 		choices.getChildren().addAll( this.backendChoice, this.typeChoice );
 		this.grid.add( choices, 0, 0 );
 		this.setResultConverter( button -> button.equals( ButtonType.OK ) ? currentBackend.get() : null );
+		this.typeChoice.valueProperty().addListener( ( obs, oldv, newv ) -> {
+			final BackendDialog backendDialog = backendInfoDialogs.get( backendChoice.getValue() );
+			backendDialog.typeChanged( newv );
+		} );
 		combineErrorMessages();
 
 	}

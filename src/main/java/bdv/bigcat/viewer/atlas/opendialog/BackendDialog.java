@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 
 import bdv.bigcat.viewer.atlas.data.DataSource;
 import bdv.bigcat.viewer.atlas.data.LabelDataSource;
+import bdv.bigcat.viewer.atlas.opendialog.OpenSourceDialog.TYPE;
 import bdv.util.IdService;
 import bdv.util.volatiles.SharedQueue;
 import javafx.beans.property.DoubleProperty;
@@ -78,6 +79,9 @@ public interface BackendDialog
 	{
 		return null;
 	}
+
+	public default void typeChanged( final TYPE type )
+	{}
 
 	public ObservableStringValue nameProperty();
 
