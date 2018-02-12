@@ -1,11 +1,10 @@
 package bdv.bigcat.viewer.bdvfx;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Predicate;
 
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
@@ -30,6 +29,8 @@ public abstract class MouseDragFX implements InstallAndRemove< Node >
 
 	protected final Object transformLock;
 
+	protected final boolean consume;
+
 	public MouseDragFX( final String name, final Predicate< MouseEvent >[] eventFilter, final Object transformLock )
 	{
 		this( name, eventFilter, false, transformLock );
@@ -41,6 +42,7 @@ public abstract class MouseDragFX implements InstallAndRemove< Node >
 		this.name = name;
 		this.eventFilter = eventFilter;
 		this.transformLock = transformLock;
+		this.consume = consume;
 	}
 
 	public abstract void initDrag( MouseEvent event );
@@ -71,6 +73,20 @@ public abstract class MouseDragFX implements InstallAndRemove< Node >
 		node.removeEventHandler( MouseEvent.MOUSE_RELEASED, release );
 	}
 
+	public void installIntoAsFilter( final Node node )
+	{
+		node.addEventFilter( MouseEvent.DRAG_DETECTED, detect );
+		node.addEventFilter( MouseEvent.MOUSE_DRAGGED, drag );
+		node.addEventFilter( MouseEvent.MOUSE_RELEASED, release );
+	}
+
+	public void removeFromAsFilter( final Node node )
+	{
+		node.removeEventFilter( MouseEvent.DRAG_DETECTED, detect );
+		node.removeEventFilter( MouseEvent.MOUSE_DRAGGED, drag );
+		node.removeEventFilter( MouseEvent.MOUSE_RELEASED, release );
+	}
+
 	private class DragDetect implements EventHandler< MouseEvent >
 	{
 
@@ -94,9 +110,7 @@ public abstract class MouseDragFX implements InstallAndRemove< Node >
 		public void handle( final MouseEvent event )
 		{
 			if ( isDragging.get() )
-			{
 				drag( event );
-			}
 		}
 	}
 
@@ -109,11 +123,19 @@ public abstract class MouseDragFX implements InstallAndRemove< Node >
 			final boolean wasDragging = isDragging.get();
 			isDragging.set( false );
 			if ( wasDragging )
-			{
 				endDrag( event );
-			}
 		}
 
+	}
+
+	public ObservableBooleanValue isDraggingProperty()
+	{
+		return this.isDragging;
+	}
+
+	public void abortDrag()
+	{
+		this.isDragging.set( false );
 	}
 
 }

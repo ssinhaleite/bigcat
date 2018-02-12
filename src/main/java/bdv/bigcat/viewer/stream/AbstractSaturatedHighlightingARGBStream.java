@@ -16,7 +16,7 @@
  */
 package bdv.bigcat.viewer.stream;
 
-import bdv.bigcat.viewer.state.FragmentSegmentAssignment;
+import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
 import bdv.bigcat.viewer.state.SelectedIds;
 import bdv.labels.labelset.Label;
 
@@ -29,7 +29,7 @@ import bdv.labels.labelset.Label;
  */
 abstract public class AbstractSaturatedHighlightingARGBStream extends AbstractHighlightingARGBStream
 {
-	public AbstractSaturatedHighlightingARGBStream( final SelectedIds highlights, final FragmentSegmentAssignment assignment )
+	public AbstractSaturatedHighlightingARGBStream( final SelectedIds highlights, final FragmentSegmentAssignmentState< ? > assignment )
 	{
 		super( highlights, assignment );
 	}
@@ -40,9 +40,10 @@ abstract public class AbstractSaturatedHighlightingARGBStream extends AbstractHi
 	}
 
 	@Override
-	protected int argbImpl( final long fragmentId )
+	protected int argbImpl( final long fragmentId, final boolean colorFromSegmentId )
 	{
-		final long assigned = assignment.getSegment( fragmentId );
+		final boolean isActiveSegment = isActiveSegment( fragmentId );
+		final long assigned = colorFromSegmentId || !isActiveSegment ? assignment.getSegment( fragmentId ) : fragmentId;
 		if ( !argbCache.contains( assigned ) )
 		{
 			double x = getDouble( seed + assigned );
@@ -68,7 +69,7 @@ abstract public class AbstractSaturatedHighlightingARGBStream extends AbstractHi
 		if ( Label.INVALID == fragmentId )
 			argb = argb & 0x00ffffff | invalidSegmentAlpha;
 		else
-			argb = argb & 0x00ffffff | ( isActiveSegment( fragmentId ) ? isActiveFragment( fragmentId ) ? activeFragmentAlpha : activeSegmentAlpha : alpha );
+			argb = argb & 0x00ffffff | ( isActiveSegment ? isActiveFragment( fragmentId ) ? activeFragmentAlpha : activeSegmentAlpha : alpha );
 
 		return argb;
 	}

@@ -16,13 +16,15 @@
  */
 package bdv.bigcat.viewer.stream;
 
-import bdv.bigcat.ui.ARGBStream;
 import bdv.bigcat.viewer.state.AbstractState;
-import bdv.bigcat.viewer.state.FragmentSegmentAssignment;
+import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
 import bdv.bigcat.viewer.state.SelectedIds;
 import bdv.labels.labelset.Label;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.set.hash.TLongHashSet;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * Generates and caches a stream of colors.
@@ -37,6 +39,8 @@ abstract public class AbstractHighlightingARGBStream extends AbstractState< Abst
 
 	final static protected double[] bs = new double[] { 0, 0, 0, 1, 1, 1, 0 };
 
+	private static final int ZERO = 0x00000000;
+
 	protected long seed = 0;
 
 	protected int alpha = 0x20000000;
@@ -49,12 +53,22 @@ abstract public class AbstractHighlightingARGBStream extends AbstractState< Abst
 
 	protected final SelectedIds highlights;
 
-	protected final FragmentSegmentAssignment assignment;
+	protected final FragmentSegmentAssignmentState< ? > assignment;
 
-	public AbstractHighlightingARGBStream( final SelectedIds highlights, final FragmentSegmentAssignment assignment )
+	private final BooleanProperty colorFromSegmentId = new SimpleBooleanProperty();
+
+	private TLongHashSet activeFragments;
+
+	private TLongHashSet activeSegments;
+
+	public AbstractHighlightingARGBStream( final SelectedIds highlights, final FragmentSegmentAssignmentState< ? > assignment )
 	{
 		this.highlights = highlights;
 		this.assignment = assignment;
+		this.colorFromSegmentId.addListener( ( obs, oldv, newv ) -> stateChanged() );
+		this.assignment.addListener( this::setActiveFragmentsAndSegments );
+		this.highlights.addListener( this::setActiveFragmentsAndSegments );
+		setActiveFragmentsAndSegments();
 	}
 
 	protected TLongIntHashMap argbCache = new TLongIntHashMap(
@@ -102,18 +116,18 @@ abstract public class AbstractHighlightingARGBStream extends AbstractState< Abst
 
 	protected double getDouble( final long id )
 	{
-		return getDoubleImpl( id );
+		return getDoubleImpl( id, colorFromSegmentId.get() );
 	}
 
-	protected abstract double getDoubleImpl( final long id );
+	protected abstract double getDoubleImpl( final long id, boolean colorFromSegmentId );
 
 	@Override
 	public int argb( final long id )
 	{
-		return argbImpl( id );
+		return id == Label.TRANSPARENT ? ZERO : argbImpl( id, colorFromSegmentId.get() );
 	}
 
-	protected abstract int argbImpl( long id );
+	protected abstract int argbImpl( long id, boolean colorFromSegmentId );
 
 	/**
 	 * Change the seed.
@@ -180,6 +194,12 @@ abstract public class AbstractHighlightingARGBStream extends AbstractState< Abst
 		stateChanged();
 	}
 
+	public void setActiveFragmentAlpha( final int alpha )
+	{
+		this.activeFragmentAlpha = ( alpha & 0xff ) << 24;
+		stateChanged();
+	}
+
 	public int getAlpha()
 	{
 		return this.alpha >>> 24;
@@ -195,9 +215,42 @@ abstract public class AbstractHighlightingARGBStream extends AbstractState< Abst
 		return invalidSegmentAlpha >>> 24;
 	}
 
+	public int getActiveFragmentAlpha()
+	{
+		return this.activeFragmentAlpha >>> 24;
+	}
+
 	public void clearCache()
 	{
 		argbCache.clear();
 		stateChanged();
 	}
+
+	public void setColorFromSegmentId( final boolean fromSegmentId )
+	{
+		this.colorFromSegmentId.set( fromSegmentId );
+	}
+
+	public boolean getColorFromSegmentId()
+	{
+		return this.colorFromSegmentId.get();
+	}
+
+	public BooleanProperty colorFromSegmentIdProperty()
+	{
+		return this.colorFromSegmentId;
+	}
+
+	private final void setActiveFragmentsAndSegments()
+	{
+		final TLongHashSet activeFragments = new TLongHashSet( this.highlights.getActiveIds() );
+		final TLongHashSet activeSegments = new TLongHashSet();
+		activeFragments.forEach( id -> {
+			activeSegments.add( this.assignment.getSegment( id ) );
+			return true;
+		} );
+		this.activeFragments = activeFragments;
+		this.activeSegments = activeSegments;
+	}
+
 }
