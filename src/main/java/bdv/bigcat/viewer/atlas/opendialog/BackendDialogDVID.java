@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -78,13 +77,9 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private final Effect textFieldNoErrorEffect = new TextField().getEffect();
 
+	// TODO: should it overwrite the name added by the user?
 	private final StringBinding name = Bindings.createStringBinding( () -> {
-		final String[] entries = Optional
-				.ofNullable( dataset )
-				.map( d -> d.get().split( "/" ) )
-				.map( a -> a.length > 0 ? a : new String[] { null } )
-				.orElse( new String[] { null } );
-		return entries[ entries.length - 1 ];
+		return dataset.get();
 	}, dataset );
 
 	private final DatasetInfo datasetInfo = new DatasetInfo();
