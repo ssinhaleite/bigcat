@@ -51,16 +51,17 @@ mvn clean compile assembly:single
 java -Xmx16G -XX:+UseConcMarkSweepGC -jar target/bigcat-0.0.3-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-or you can download a compiled fat jar from [here - updated on 06.12.2017](https://www.dropbox.com/s/rlra6qg2uqog45v/bigcat-0.0.3-SNAPSHOT-jar-with-dependencies-06122017.jar?dl=0).
+or you can download a compiled fat jar from [here - updated on 12.02.2018](https://www.dropbox.com/s/hc01c2vxvfyaxfr/bigcat-0.0.3-SNAPSHOT-jar-with-dependencies-12022018.jar?dl=0).
 
 ## Usage
 
-It is necessary to load a dataset source by pressing `ctrl` + `o`.
-Right now, you can load N5 and HDF5 files.
+First, it is necessary to load a dataset source by pressing `ctrl` + `o`.
+You can load data from DVID server, N5 and HDF5 files.
 
-To use the highlight mode, it is necessary to load a label source and select it from the upper menu by pressing `ctrl` + `tab`.
+By pressing `p`, a panel will appear on the right side, where you can see all the loaded sources. Also, there is a combo box with all the available modes.
+The highlight mode can be used after load a label source and select it from the side menu by pressing `ctrl` + `tab` (a source is selected if its name is underlined).
 
-There are three modes available:
+There are four modes available:
 * Navigation only:
 
 * Highlights:
@@ -69,6 +70,8 @@ There are three modes available:
    Every selected neuron will be highlighted on the 2d panels and its 3d shape will be generated.
 
 * Merge and split:
+
+* Paint:
 
 
 Useful commands:
