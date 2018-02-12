@@ -23,11 +23,4 @@ public class AtlasApp extends Application
 		launch( args );
 	}
 
-
-//	dvid.set( "http://emdata.janelia.org/api/node" );
-//	commit.set( "822524777d3048b8bd520043f90c1d28" );
-// raw
-//	dataset.set( "grayscale" );
-// groundtruth
-//	dataset.set( "groundtruth" );
 }
