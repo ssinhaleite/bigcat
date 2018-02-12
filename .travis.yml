@@ -18,7 +18,7 @@ install:
   - cd ..
   - git clone https://github.com/saalfeldlab/n5-hdf5.git
   - cd n5-hdf5
-  - mvn clean install
+  - mvn clean install -DskipTests=true
   - cd ..
   - git clone https://github.com/zeromq/jzmq.git
   - cd jzmq/jzmq-jni
