@@ -29,6 +29,8 @@ sudo apt install libzmq3-dev
 ```
 * [jzmq](https://github.com/zeromq/jzmq)
 
+* [n5-hdf5](https://github.com/saalfeldlab/n5-hdf5)
+
 ## Compile
 
 run:
