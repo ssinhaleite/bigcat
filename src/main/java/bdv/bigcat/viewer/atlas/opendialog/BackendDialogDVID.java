@@ -237,6 +237,7 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return errorMessage;
 	}
 
+	@SuppressWarnings( "unchecked" )
 	@Override
 	public Collection< ObservableValue< String > > errorMessages()
 	{
