@@ -76,7 +76,7 @@ public class DVIDLabelblkLoader< T extends NativeType< T > > extends DVIDLoader<
 		int off = 0, l = 0;
 		do
 		{
-			l = in.read( bytes, off, data.length - off );
+			l = in.read( bytes, off, bytes.length - off );
 			off += l;
 		}
 		while ( l > 0 && off < data.length );
