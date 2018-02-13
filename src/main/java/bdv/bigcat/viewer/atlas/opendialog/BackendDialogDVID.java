@@ -1,9 +1,11 @@
 package bdv.bigcat.viewer.atlas.opendialog;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -11,10 +13,16 @@ import org.janelia.saalfeldlab.n5.DataType;
 
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
+import com.googlecode.gentyref.TypeToken;
 
 import bdv.bigcat.viewer.atlas.opendialog.OpenSourceDialog.TYPE;
+import bdv.bigcat.viewer.atlas.opendialog.dvid.DVIDParser;
+import bdv.bigcat.viewer.atlas.opendialog.dvid.DVIDUtils;
+import bdv.bigcat.viewer.atlas.opendialog.dvid.DatasetInstanceDVID;
+import bdv.bigcat.viewer.atlas.opendialog.dvid.RepoInstanceDVID;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentOnlyLocal;
 import bdv.bigcat.viewer.state.FragmentSegmentAssignmentState;
+import bdv.bigcat.viewer.util.InvokeOnJavaFXApplicationThread;
 import bdv.net.imglib2.util.Triple;
 import bdv.net.imglib2.util.ValueTriple;
 import bdv.util.volatiles.SharedQueue;
@@ -23,10 +31,14 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableStringValue;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.effect.Effect;
 import javafx.scene.effect.InnerShadow;
@@ -46,8 +58,11 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private final SimpleObjectProperty< String > repoUUID = new SimpleObjectProperty<>();
 
-	// dataset
+	private final ObservableList< String > repoUUIDChoices = FXCollections.observableArrayList();
+
 	private final SimpleObjectProperty< String > dataset = new SimpleObjectProperty<>();
+
+	private final ObservableList< String > datasetChoices = FXCollections.observableArrayList();
 
 	// combined error messages
 	private final SimpleObjectProperty< String > errorMessage = new SimpleObjectProperty<>();
@@ -55,27 +70,24 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	// no url defined
 	private final SimpleObjectProperty< String > dvidURLError = new SimpleObjectProperty<>();
 
-	// no repository defined
+	// no repository selected
 	private final SimpleObjectProperty< String > repoUUIDError = new SimpleObjectProperty<>();
 
-	// couldn't find the repo informed
-	private final SimpleObjectProperty< String > invalidURLError = new SimpleObjectProperty<>();
-
-	// the number of dimensions is less than 3 or bigger than 5
-	private final SimpleObjectProperty< String > axisError = new SimpleObjectProperty<>();
-
-	// error message for invalid dataset
+	// no dataset selected
 	private final SimpleObjectProperty< String > datasetError = new SimpleObjectProperty<>();
 
+	// couldn't find repo/dataset on informed url
+	private final SimpleObjectProperty< String > invalidURLError = new SimpleObjectProperty<>();
+
 	private final SimpleObjectProperty< Effect > dvidErrorEffect = new SimpleObjectProperty<>();
-
-	private final SimpleObjectProperty< Effect > commitErrorEffect = new SimpleObjectProperty<>();
-
-	private final SimpleObjectProperty< Effect > datasetErrorEffect = new SimpleObjectProperty<>();
 
 	private final Effect textFieldErrorEffect = new InnerShadow( 10, Color.ORANGE );
 
 	private final Effect textFieldNoErrorEffect = new TextField().getEffect();
+
+	private final SimpleBooleanProperty isRepoUUIDDropDownReady = new SimpleBooleanProperty();
+
+	private final SimpleBooleanProperty isDatasetDropDownReady = new SimpleBooleanProperty();
 
 	// TODO: should it overwrite the name added by the user?
 	private final StringBinding name = Bindings.createStringBinding( () -> {
@@ -84,52 +96,69 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 
 	private final DatasetInfo datasetInfo = new DatasetInfo();
 
-	private DVIDResponse response = null;
+	private DatasetInstanceDVID response = null;
+
+	private Map< String, RepoInstanceDVID > repoInfo = null;
 
 	private TYPE type = TYPE.RAW;
 
 	public BackendDialogDVID()
 	{
 		dvidURL.addListener( ( obs, oldv, newv ) -> {
-			if ( newv != null && !newv.isEmpty() )
+			if ( newv != null && !newv.isEmpty() && !newv.equals( oldv ) )
 			{
 				this.dvidURLError.set( null );
-				updateMetaInformation();
+				ArrayList< String > repositories = updateRepositories();
+				if ( repositories != null && !repositories.isEmpty() )
+				{
+					InvokeOnJavaFXApplicationThread.invoke( () -> repoUUIDChoices.setAll( repositories ) );
+					InvokeOnJavaFXApplicationThread.invoke( () -> this.repoUUID.set( null ) );
+					this.isRepoUUIDDropDownReady.set( true );
+					this.invalidURLError.set( null );
+				}
 			}
 			else
 			{
-				this.dvidURLError.set( "No valid dvid url." );
+				isRepoUUIDDropDownReady.set( false );
+				this.dvidURLError.set( "Not a valid dvid url" );
 			}
 		} );
 
 		repoUUID.addListener( ( obs, oldv, newv ) -> {
-			if ( newv != null && !newv.isEmpty() )
+			if ( newv != null && !newv.isEmpty() && !newv.equals( oldv ) )
 			{
 				this.repoUUIDError.set( null );
-				updateMetaInformation();
+				ArrayList< String > datasets = updateDatasets();
+				if ( datasets != null & !datasets.isEmpty() )
+				{
+					InvokeOnJavaFXApplicationThread.invoke( () -> datasetChoices.setAll( datasets ) );
+					InvokeOnJavaFXApplicationThread.invoke( () -> this.dataset.set( null ) );
+					this.isDatasetDropDownReady.set( true );
+					this.invalidURLError.set( null );
+				}
+				else
+					this.invalidURLError.set( "No dataset was found on the server" );
 			}
 			else
 			{
-				this.repoUUIDError.set( "No valid commit" );
+				isDatasetDropDownReady.set( false );
+				this.repoUUIDError.set( "No repository selected" );
 			}
 		} );
 
 		dataset.addListener( ( obs, oldv, newv ) -> {
-			if ( newv != null && !newv.isEmpty() )
+			if ( newv != null && !newv.isEmpty() && !newv.equals( oldv ) )
 			{
 				this.datasetError.set( null );
 				updateMetaInformation();
 			}
 			else
 			{
-				this.datasetError.set( "No valid dataset" );
+				this.datasetError.set( "No dataset selected" );
 			}
 		} );
 
 		dvidURLError.addListener( ( obs, oldv, newv ) -> this.dvidErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
-		repoUUIDError.addListener( ( obs, oldv, newv ) -> this.commitErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
-		datasetError.addListener( ( obs, oldv, newv ) -> this.datasetErrorEffect.set( newv != null && newv.length() > 0 ? textFieldErrorEffect : textFieldNoErrorEffect ) );
-
 		this.errorMessages().forEach( em -> em.addListener( ( obs, oldv, newv ) -> combineErrorMessages() ) );
 
 		dvidURL.set( "" );
@@ -146,84 +175,33 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		dvidURLField.setPromptText( "dvid url" );
 		dvidURLField.textProperty().bindBidirectional( dvidURL );
 
-		final TextField commitField = new TextField( repoUUID.get() );
-		commitField.setMinWidth( 0 );
-		commitField.setMaxWidth( Double.POSITIVE_INFINITY );
-		commitField.setPromptText( "commit" );
-		commitField.textProperty().bindBidirectional( repoUUID );
+		final ComboBox< String > repoUUIDDropDown = new ComboBox<>( repoUUIDChoices );
+		repoUUIDDropDown.setPromptText( "repo UUID" );
+		repoUUIDDropDown.setEditable( false );
+		repoUUIDDropDown.valueProperty().bindBidirectional( repoUUID );
+		repoUUIDDropDown.setMinWidth( 0 );
+		repoUUIDDropDown.setMaxWidth( Double.POSITIVE_INFINITY );
+		repoUUIDDropDown.disableProperty().bind( isRepoUUIDDropDownReady.not() );
 
-		final TextField datasetField = new TextField( dataset.get() );
-		datasetField.setMinWidth( 0 );
-		datasetField.setMaxWidth( Double.POSITIVE_INFINITY );
-		datasetField.setPromptText( "dataset" );
-		datasetField.textProperty().bindBidirectional( dataset );
+		final ComboBox< String > datasetDropDown = new ComboBox<>( datasetChoices );
+		datasetDropDown.setPromptText( "dataset" );
+		datasetDropDown.setEditable( false );
+		datasetDropDown.valueProperty().bindBidirectional( dataset );
+		datasetDropDown.setMinWidth( 0 );
+		datasetDropDown.setMaxWidth( Double.POSITIVE_INFINITY );
+		datasetDropDown.disableProperty().bind( isDatasetDropDownReady.not() );
 
 		final GridPane grid = new GridPane();
 		grid.add( dvidURLField, 0, 0 );
-		grid.add( commitField, 0, 1 );
-		grid.add( datasetField, 0, 2 );
+		grid.add( repoUUIDDropDown, 0, 1 );
+		grid.add( datasetDropDown, 0, 2 );
 		GridPane.setHgrow( dvidURLField, Priority.ALWAYS );
-		GridPane.setHgrow( commitField, Priority.ALWAYS );
-		GridPane.setHgrow( datasetField, Priority.ALWAYS );
+		GridPane.setHgrow( repoUUIDDropDown, Priority.ALWAYS );
+		GridPane.setHgrow( datasetDropDown, Priority.ALWAYS );
 
 		setErrorEffect( dvidURLField, this.dvidErrorEffect );
-		setErrorEffect( commitField, this.commitErrorEffect );
-		setErrorEffect( datasetField, this.datasetErrorEffect );
 
 		return grid;
-	}
-
-	private void setErrorEffect( TextField textField, SimpleObjectProperty< Effect > effect )
-	{
-		effect.addListener( ( obs, oldv, newv ) -> {
-			if ( !textField.isFocused() )
-				textField.setEffect( newv );
-		} );
-
-		textField.setEffect( effect.get() );
-
-		textField.focusedProperty().addListener( ( obs, oldv, newv ) -> {
-			if ( newv )
-				textField.setEffect( textFieldNoErrorEffect );
-			else
-				textField.setEffect( effect.get() );
-		} );
-	}
-
-	private void updateMetaInformation()
-	{
-		if ( ( dvidURL.get() != null ) && ( repoUUID.get() != null ) && ( dataset.get() != null ) )
-		{
-			if ( dvidURL.get().isEmpty() || repoUUID.get().isEmpty() || dataset.get().isEmpty() )
-				return;
-
-			String infoUrl = dvidURL.get() + "/api/node/" + repoUUID.get() + "/" + dataset.get() + "/info";
-			try
-			{
-				response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
-			}
-			catch ( JsonSyntaxException | JsonIOException | IOException e )
-			{
-
-				this.invalidURLError.set( "no data/repository found" );
-				return;
-			}
-			this.invalidURLError.set( "" );
-
-			if ( response.Extended.VoxelSize.length == 3 )
-				setResolution( response.Extended.VoxelSize );
-
-			if ( response.Extended.MinPoint.length == 3 )
-				setOffset( response.Extended.MinPoint );
-
-			String type = "";
-			if ( response.Extended.Values.size() > 0 )
-				type = response.Extended.Values.get( 0 ).DataType;
-
-			DataType datatype = DataType.fromString( type );
-			this.datasetInfo.minProperty().set( minForType( datatype ) );
-			this.datasetInfo.maxProperty().set( maxForType( datatype ) );
-		}
 	}
 
 	@Override
@@ -232,11 +210,10 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 		return errorMessage;
 	}
 
-	@SuppressWarnings( "unchecked" )
 	@Override
 	public Collection< ObservableValue< String > > errorMessages()
 	{
-		return Arrays.asList( this.dvidURLError, this.repoUUIDError, this.datasetError, this.invalidURLError, this.axisError );
+		return Arrays.asList( this.dvidURLError, this.invalidURLError, this.repoUUIDError, this.datasetError );
 	}
 
 	@Override
@@ -305,6 +282,125 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 	public void typeChanged( final TYPE type )
 	{
 		this.type = type;
+	}
+
+	@Override
+	public DoubleProperty[] resolution()
+	{
+		return this.datasetInfo.spatialResolutionProperties();
+	}
+
+	@Override
+	public DoubleProperty[] offset()
+	{
+		return this.datasetInfo.spatialOffsetProperties();
+	}
+
+	@Override
+	public ObservableStringValue nameProperty()
+	{
+		return this.name;
+	}
+
+	@Override
+	public String identifier()
+	{
+		return "DVID";
+	}
+
+	@Override
+	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
+	{
+		return Stream.generate( FragmentSegmentAssignmentOnlyLocal::new ).iterator();
+	}
+
+	private void setErrorEffect( TextField textField, SimpleObjectProperty< Effect > effect )
+	{
+		effect.addListener( ( obs, oldv, newv ) -> {
+			if ( !textField.isFocused() )
+				textField.setEffect( newv );
+		} );
+
+		textField.setEffect( effect.get() );
+
+		textField.focusedProperty().addListener( ( obs, oldv, newv ) -> {
+			if ( newv )
+				textField.setEffect( textFieldNoErrorEffect );
+			else
+				textField.setEffect( effect.get() );
+		} );
+	}
+
+	private ArrayList< String > updateRepositories()
+	{
+		String repoInfoURL = dvidURL.get() + "/api/repos/info";
+		try
+		{
+			repoInfo = DVIDParser.fetch( repoInfoURL, new TypeToken< Map< String, RepoInstanceDVID > >()
+			{}.getType() );
+
+			final ArrayList< String > repositories = new ArrayList<>( repoInfo.keySet() );
+			return repositories;
+
+		}
+		catch ( JsonSyntaxException | JsonIOException | IOException | IllegalArgumentException e )
+		{
+			this.invalidURLError.set( "No repository was found on the server" );
+			return null;
+		}
+	}
+
+	private ArrayList< String > updateDatasets()
+	{
+		try
+		{
+			final Map< String, DatasetInstanceDVID > dataInstances = repoInfo.get( repoUUID.get() ).DataInstances;
+
+			final ArrayList< String > datasets = new ArrayList<>( dataInstances.keySet() );
+			return datasets;
+
+		}
+		catch ( JsonSyntaxException | JsonIOException e )
+		{
+			this.invalidURLError.set( "No dataset was found on the server" );
+			return null;
+		}
+	}
+
+	private void updateMetaInformation()
+	{
+		if ( ( dvidURL.get() != null ) && ( repoUUID.get() != null ) && ( dataset.get() != null ) )
+		{
+			if ( dvidURL.get().isEmpty() || repoUUID.get().isEmpty() || dataset.get().isEmpty() )
+				return;
+
+			String infoUrl = dvidURL.get() + "/api/node/" + repoUUID.get() + "/" + dataset.get() + "/info";
+			try
+			{
+				response = DVIDParser.fetch( infoUrl, DatasetInstanceDVID.class );
+			}
+			catch ( JsonSyntaxException | JsonIOException | IOException e )
+			{
+
+				this.invalidURLError.set( "no data/repository found" );
+				return;
+			}
+			this.invalidURLError.set( "" );
+
+			if ( response.Extended.VoxelSize.length == 3 )
+				setResolution( response.Extended.VoxelSize );
+
+			if ( response.Extended.MinPoint.length == 3 )
+				setOffset( response.Extended.MinPoint );
+
+			String type = "";
+			if ( response.Extended.Values.size() > 0 )
+				type = response.Extended.Values.get( 0 ).DataType;
+
+			DataType datatype = DataType.fromString( type );
+			this.datasetInfo.minProperty().set( minForType( datatype ) );
+			this.datasetInfo.maxProperty().set( maxForType( datatype ) );
+		}
 	}
 
 	private static double minForType( final DataType t )
@@ -381,35 +477,4 @@ public class BackendDialogDVID implements SourceFromRAI, CombinesErrorMessages
 			return false;
 		}
 	}
-
-	@Override
-	public DoubleProperty[] resolution()
-	{
-		return this.datasetInfo.spatialResolutionProperties();
-	}
-
-	@Override
-	public DoubleProperty[] offset()
-	{
-		return this.datasetInfo.spatialOffsetProperties();
-	}
-
-	@Override
-	public ObservableStringValue nameProperty()
-	{
-		return this.name;
-	}
-
-	@Override
-	public String identifier()
-	{
-		return "DVID";
-	}
-
-	@Override
-	public Iterator< ? extends FragmentSegmentAssignmentState< ? > > assignments()
-	{
-		return Stream.generate( FragmentSegmentAssignmentOnlyLocal::new ).iterator();
-	}
-
 }
