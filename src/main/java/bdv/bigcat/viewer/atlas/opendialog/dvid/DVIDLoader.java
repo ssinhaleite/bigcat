@@ -1,4 +1,4 @@
-package bdv.bigcat.viewer.atlas.opendialog;
+package bdv.bigcat.viewer.atlas.opendialog.dvid;
 
 import java.io.IOException;
 import java.util.function.BiConsumer;

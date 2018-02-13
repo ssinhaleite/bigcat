@@ -1,8 +1,8 @@
-package bdv.bigcat.viewer.atlas.opendialog;
+package bdv.bigcat.viewer.atlas.opendialog.dvid;
 
 import java.util.List;
 
-public class DVIDResponse
+public class DatasetInstanceDVID
 {
 
 	static public class Base

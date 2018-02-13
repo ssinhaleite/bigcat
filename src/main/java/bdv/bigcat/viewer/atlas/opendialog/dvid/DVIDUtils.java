@@ -1,4 +1,4 @@
-package bdv.bigcat.viewer.atlas.opendialog;
+package bdv.bigcat.viewer.atlas.opendialog.dvid;
 
 import static net.imglib2.cache.img.AccessFlags.VOLATILE;
 import static net.imglib2.cache.img.PrimitiveType.BYTE;
@@ -54,7 +54,7 @@ public class DVIDUtils
 			final boolean isRaw ) throws IOException
 	{
 		String infoUrl = dvidURL + "/api/node/" + repoUUID + "/" + dataset + "/info";
-		final DVIDResponse response = DVIDParser.fetch( infoUrl, DVIDResponse.class );
+		final DatasetInstanceDVID response = DVIDParser.fetch( infoUrl, DatasetInstanceDVID.class );
 		final int[] blockSize = new int[] { response.Extended.BlockSize[ 0 ], response.Extended.BlockSize[ 1 ], response.Extended.BlockSize[ 2 ] };
 		final double[] voxelSize = new double[] { response.Extended.VoxelSize[ 0 ], response.Extended.VoxelSize[ 1 ], response.Extended.VoxelSize[ 2 ] };
 		final double[] minPoint = new double[] { response.Extended.MinPoint[ 0 ], response.Extended.MinPoint[ 1 ], response.Extended.MinPoint[ 2 ] };
