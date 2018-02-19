@@ -1,10 +1,13 @@
 package bdv.bigcat.viewer.atlas.opendialog.dvid;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.util.function.BiConsumer;
 
 import org.janelia.saalfeldlab.n5.DataBlock;
 import org.janelia.saalfeldlab.n5.DataType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.imglib2.Cursor;
 import net.imglib2.cache.img.CellLoader;
@@ -20,6 +23,8 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public abstract class DVIDLoader< T extends NativeType< T > > implements CellLoader< T >
 {
+	private static final Logger LOG = LoggerFactory.getLogger( MethodHandles.lookup().lookupClass() );
+
 	protected final String dvidURL;
 
 	protected final String repoUUID;
@@ -78,6 +83,8 @@ public abstract class DVIDLoader< T extends NativeType< T > > implements CellLoa
 		{
 			final String urlString = createURL();
 			block = readBlock( urlString );
+
+			LOG.debug( "{} {}", urlString, block.getNumElements() );
 		}
 		catch ( final IOException e )
 		{
