@@ -173,6 +173,8 @@ public class SourceInfo
 	public synchronized < T > void removeSource( final Source< T > source )
 	{
 		final int currentSourceIndex = this.sources.indexOf( source );
+		if ( this.states.get( source ).typeProperty().get() == TYPE.LABEL )
+			this.states.get( source ).meshManagerProperty().get().removeAllNeurons();
 		this.states.remove( source );
 		this.sources.remove( source );
 		this.currentSource.set( this.sources.size() == 0 ? null : this.sources.get( Math.max( currentSourceIndex - 1, 0 ) ) );
