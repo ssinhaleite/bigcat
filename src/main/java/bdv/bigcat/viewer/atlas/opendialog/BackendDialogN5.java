@@ -102,19 +102,34 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 		} );
 	}
 
-	@SuppressWarnings( "unchecked" )
 	@Override
 	public < T extends NativeType< T >, V extends Volatile< T > > Triple< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[], AffineTransform3D[] > getDataAndVolatile(
 			final SharedQueue sharedQueue,
 			final int priority ) throws IOException
 	{
 		final boolean isLabelMultisetType = isLabelMultisetType();
+		final String group = groupProperty.get();
+		final String dataset = this.dataset.get();
+		final double[] resolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
+		final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
+
+		return getDataAndVolatile( sharedQueue, priority, isLabelMultisetType, group, dataset, resolution, offset );
+	}
+
+	@SuppressWarnings( "unchecked" )
+	public < T extends NativeType< T >, V extends Volatile< T > > Triple< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[], AffineTransform3D[] > getDataAndVolatile(
+			final SharedQueue sharedQueue,
+			final int priority,
+			boolean isLabelMultisetType,
+			String group,
+			String dataset,
+			double[] resolution,
+			double[] offset) throws IOException
+	{
 		LOG.warn( "Source is label multiset? {}", isLabelMultisetType );
 		if ( isLabelMultisetType )
 		{
-			final String group = groupProperty.get();
 			final N5Reader reader = new N5FSReader( group );
-			final String dataset = this.dataset.get();
 			try
 			{
 				if ( reader.datasetExists( dataset ) )
@@ -138,8 +153,6 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 							new VolatileLabelMultisetType() );
 					final RandomAccessibleInterval< V > vraw = ( RandomAccessibleInterval< V > ) volatileCachedImg;
 //							VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
-					final double[] resolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
-					final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
 					final AffineTransform3D transform = new AffineTransform3D();
 					transform.set(
 							resolution[ 0 ], 0, 0, offset[ 0 ],
@@ -163,11 +176,10 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 			final RandomAccessibleInterval< T >[] raw = new RandomAccessibleInterval[ scaleDatasets.length ];
 			final RandomAccessibleInterval< V >[] vraw = new RandomAccessibleInterval[ scaleDatasets.length ];
 			final AffineTransform3D[] transforms = new AffineTransform3D[ scaleDatasets.length ];
-			final double[] initialResolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
+			final double[] initialResolution = resolution;
 			final double[] initialDonwsamplingFactors = Optional
 					.ofNullable( reader.getAttribute( dataset + "/" + scaleDatasets[ 0 ], "downsamplingFactors", double[].class ) )
 					.orElse( new double[] { 1, 1, 1 } );
-			final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
 			LOG.warn( "Initial resolution={}", Arrays.toString( initialResolution ) );
 			for ( int scale = 0; scale < scaleDatasets.length; ++scale )
 			{
@@ -224,17 +236,13 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 		}
 		else
 		{
-			final String group = groupProperty.get();
 			final N5Reader reader = new N5FSReader( group );
-			final String dataset = this.dataset.get();
 			try
 			{
 				if ( reader.datasetExists( dataset ) )
 				{
 					final RandomAccessibleInterval< T > raw = N5Utils.openVolatile( reader, dataset );
 					final RandomAccessibleInterval< V > vraw = VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
-					final double[] resolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
-					final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
 					final AffineTransform3D transform = new AffineTransform3D();
 					transform.set(
 							resolution[ 0 ], 0, 0, offset[ 0 ],
@@ -255,9 +263,8 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 			final RandomAccessibleInterval< T >[] raw = new RandomAccessibleInterval[ scaleDatasets.length ];
 			final RandomAccessibleInterval< V >[] vraw = new RandomAccessibleInterval[ scaleDatasets.length ];
 			final AffineTransform3D[] transforms = new AffineTransform3D[ scaleDatasets.length ];
-			final double[] initialResolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
+			final double[] initialResolution = resolution;
 			final double[] initialDonwsamplingFactors = Optional.ofNullable( reader.getAttribute( dataset + "/" + scaleDatasets[ 0 ], "downsamplingFactors", double[].class ) ).orElse( new double[] { 1, 1, 1 } );
-			final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
 			LOG.debug( "Initial resolution={}", Arrays.toString( initialResolution ) );
 			for ( int scale = 0; scale < scaleDatasets.length; ++scale )
 			{
@@ -600,6 +607,11 @@ public class BackendDialogN5 extends BackendDialogGroupAndDataset implements Com
 	{
 		final String ds = dataset.get();
 		final String group = groupProperty.get();
+		return getAttribute( group, ds, key, clazz );
+	}
+
+	public < T > T getAttribute( final String group, final String ds, final String key, final Class< T > clazz ) throws IOException
+	{
 		final N5FSReader reader = new N5FSReader( group );
 
 		if ( reader.datasetExists( ds ) )

@@ -80,13 +80,24 @@ public class BackendDialogHDF5 extends BackendDialogGroupAndDataset implements C
 		final String dataset = this.dataset.get();
 		LOG.debug( "Opening dataset: {}/{}", group, dataset );
 		final double[] resolution = Arrays.stream( resolution() ).mapToDouble( DoubleProperty::get ).toArray();
+		final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
+		return getDataAndVolatile( sharedQueue, priority, group, dataset, resolution, offset );
+	}
+
+	public < T extends NativeType< T >, V extends Volatile< T > > Triple< RandomAccessibleInterval< T >[], RandomAccessibleInterval< V >[], AffineTransform3D[] > getDataAndVolatile(
+			final SharedQueue sharedQueue,
+			final int priority,
+			String group,
+			String dataset,
+			double[] resolution,
+			double[] offset ) throws IOException
+	{
 		final N5HDF5Reader n5 = getDefaultChunksizeReader( group, dataset, defaultBlockSize( MAX_DEFAULT_BLOCK_SIZE, resolution ) );
 		// TODO optimize block size
 		// TODO do multiscale
 		final RandomAccessibleInterval< T > raw = N5Utils.openVolatile( n5, dataset );
 		final RandomAccessibleInterval< V > vraw = VolatileViews.wrapAsVolatile( raw, sharedQueue, new CacheHints( LoadingStrategy.VOLATILE, priority, true ) );
 		final AffineTransform3D transform = new AffineTransform3D();
-		final double[] offset = Arrays.stream( offset() ).mapToDouble( DoubleProperty::get ).toArray();
 		LOG.debug( "Setting resolution {} and offset {}", Arrays.toString( resolution ), Arrays.toString( offset ) );
 		transform.set(
 				resolution[ 0 ], 0, 0, offset[ 0 ],
