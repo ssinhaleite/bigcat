@@ -89,17 +89,17 @@ public class ExampleApplicationLauritzen01
 
 		final double[] resolution = { 4, 4, 40 };
 
-		final Parameters params = getParameters( args );
+		final CommandLineParameters params = getParameters( args );
 		if ( params != null )
 		{
 			LOG.info( "parameters are not null" );
-			n5Path = params.filePath;
+			n5Path = params.rawFilePath;
 			rawGroup = params.rawDatasetPath;
 			labelsN5Path = n5Path;
 			labelsDataset = params.labelDatasetPath;
-			resolution[ 0 ] = params.resolution.get( 0 );
-			resolution[ 1 ] = params.resolution.get( 1 );
-			resolution[ 2 ] = params.resolution.get( 2 );
+			resolution[ 0 ] = params.xRawResolution;
+			resolution[ 1 ] = params.yRawResolution;
+			resolution[ 2 ] = params.zRawResolution;
 
 			System.out.println( Arrays.toString( resolution ) );
 		}
@@ -277,10 +277,10 @@ public class ExampleApplicationLauritzen01
 		latch.await();
 	}
 
-	private static Parameters getParameters( final String[] args )
+	private static CommandLineParameters getParameters( final String[] args )
 	{
 		// get the parameters
-		final Parameters params = new Parameters();
+		final CommandLineParameters params = new CommandLineParameters();
 		JCommander.newBuilder()
 				.addObject( params )
 				.build()
@@ -293,9 +293,9 @@ public class ExampleApplicationLauritzen01
 		return params;
 	}
 
-	private static boolean validateParameters( final Parameters params )
+	private static boolean validateParameters( final CommandLineParameters params )
 	{
-		return params.filePath != "";
+		return params.rawFilePath != "";
 	}
 
 	public static class LabelIntersectionCellLoader implements CellLoader< UnsignedLongType >

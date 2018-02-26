@@ -51,15 +51,15 @@ public class ExampleApplicationSampleE
 
 		double[] resolution = { 4, 4, 40 };
 
-		final Parameters params = getParameters( args );
+		final CommandLineParameters params = getParameters( args );
 		if ( params != null )
 		{
 			LOG.info( "parameters are not null" );
-			n5Path = params.filePath;
+			n5Path = params.rawFilePath;
 			rawGroup = params.rawDatasetPath;
 			labelsN5Path = n5Path;
 			labelsDataset = params.labelDatasetPath;
-			resolution = new double[] { params.resolution.get( 0 ), params.resolution.get( 1 ), params.resolution.get( 2 ) };
+			resolution = new double[] { params.xRawResolution, params.yRawResolution, params.zRawResolution };
 
 			System.out.println( Arrays.toString( resolution ) );
 		}
@@ -113,10 +113,10 @@ public class ExampleApplicationSampleE
 		latch.await();
 	}
 
-	private static Parameters getParameters( final String[] args )
+	private static CommandLineParameters getParameters( final String[] args )
 	{
 		// get the parameters
-		final Parameters params = new Parameters();
+		final CommandLineParameters params = new CommandLineParameters();
 		JCommander.newBuilder()
 				.addObject( params )
 				.build()
@@ -129,9 +129,9 @@ public class ExampleApplicationSampleE
 		return params;
 	}
 
-	private static boolean validateParameters( final Parameters params )
+	private static boolean validateParameters( final CommandLineParameters params )
 	{
-		return params.filePath != "";
+		return params.rawFilePath != "";
 	}
 
 	public static class LabelIntersectionCellLoader implements CellLoader<UnsignedLongType> {
