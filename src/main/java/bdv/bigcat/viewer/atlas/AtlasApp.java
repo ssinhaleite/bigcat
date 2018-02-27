@@ -44,7 +44,7 @@ public class AtlasApp extends Application
 
 		if ( CommandLineParameters.hasRawParameters( params ) )
 		{
-			getRaw( params.rawDatasetPath.substring( params.rawDatasetPath.lastIndexOf( "/" ), params.rawDatasetPath.length() - 1 ),
+			loadRaw( params.rawDatasetPath.substring( params.rawDatasetPath.lastIndexOf( "/" ), params.rawDatasetPath.length() - 1 ),
 					sharedQueue, sharedQueue.getNumPriorities() - 1,
 					params.rawFilePath, params.rawDatasetPath,
 					new double[] { params.xRawResolution, params.yRawResolution, params.zRawResolution },
@@ -52,10 +52,6 @@ public class AtlasApp extends Application
 					atlas );
 		}
 
-		if ( CommandLineParameters.hasLabelParameters( params ) )
-		{
-			System.out.println( "load label" );
-		}
 	}
 
 	public static void main( final String[] args )
@@ -64,7 +60,8 @@ public class AtlasApp extends Application
 		launch( args );
 	}
 
-	private < T extends RealType< T > & NativeType< T >, V extends AbstractVolatileRealType< T, V > & NativeType< V > > void getRaw(
+	@SuppressWarnings( "unchecked" )
+	private < T extends RealType< T > & NativeType< T >, V extends AbstractVolatileRealType< T, V > & NativeType< V > > void loadRaw(
 			final String name,
 			final SharedQueue sharedQueue,
 			final int priority,
@@ -104,7 +101,7 @@ public class AtlasApp extends Application
 		}
 	}
 
-	public static < T extends Type< T >, V extends Type< V > > Collection< DataSource< T, V > > getCached(
+	private static < T extends Type< T >, V extends Type< V > > Collection< DataSource< T, V > > getCached(
 			final RandomAccessibleInterval< T >[] rai,
 			final RandomAccessibleInterval< V >[] vrai,
 			final AffineTransform3D[] transforms,
